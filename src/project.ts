@@ -1,23 +1,32 @@
+import { existsSync } from "fs";
 import { exec, toDomainNamePart } from "./lib";
 import { dockerComposeSchema } from "./schemas/compose";
 import path from "path";
 
+export interface ProjectOptions {
+  appName: string;
+  source: ProjectSource;
+  /** Relative to the project's directory */
+  root?: string;
+}
+
 export class Project {
-  #cwd: string;
+  private constructor(public readonly options: ProjectOptions) {}
 
-  private constructor(
-    public readonly appName: string,
-    public readonly source: ProjectSource
-  ) {
-    this.#cwd = path.join(PATHS.apps, appName);
-  }
-
-  static async create(appName: string, source: ProjectSource) {
-    const project = new Project(appName, source);
+  static async create({
+    appName,
+    source,
+    root,
+  }: {
+    appName: string;
+    source: ProjectSource;
+    root?: string;
+  }) {
+    const project = new Project({ appName, source, root });
     project._cleanup();
 
     if (source.type === "git") {
-      await project._clone({
+      await project._cloneOrPull({
         repo: source.repo,
         branch: source.branch,
       });
@@ -30,53 +39,81 @@ export class Project {
     return project;
   }
 
+  static async load(appName: string) {
+    const file = Bun.file(
+      path.join(PATHS.apps, ".stored", appName, "project.json")
+    );
+    if (!(await file.exists())) throw new Error("No project file found");
+
+    return new Project(await file.json());
+  }
+
+  async store() {
+    const json = JSON.stringify(this, null, 2);
+    await Bun.write(
+      path.join(PATHS.apps, ".stored", this.options.appName, "project.json"),
+      json
+    );
+  }
+
   get paths() {
     const self = this;
 
     return {
+      get projectDirectory() {
+        return path.join(PATHS.apps, self.options.appName);
+      },
       get root() {
-        return self.#cwd;
+        return path.join(this.projectDirectory, self.options.root ?? ".");
       },
       get temp() {
-        return path.join(self.#cwd, ".app-preview");
+        return path.join(this.root, ".app-preview");
       },
     };
   }
 
-  compose(
+  async compose(
     cmds: string[],
     options: {
       noEnvFile?: boolean;
     } = {}
   ) {
+    const composeFile = path.join(this.paths.temp, "docker-compose.yml");
+    const composeFileExists = await Bun.file(composeFile).exists();
+    if (!composeFileExists) return;
+
+    const envFile = path.join(this.paths.temp, ".env");
+    const envFileExists = await Bun.file(envFile).exists();
+
     return exec([
       "docker",
       "compose",
-      !options.noEnvFile && ["--env-file", path.join(this.paths.temp, ".env")],
+      !options.noEnvFile && envFileExists && ["--env-file", envFile],
       "--project-name",
-      this.appName,
+      this.options.appName,
       "--project-directory",
       this.paths.root,
       "-f",
-      path.join(this.paths.temp, "docker-compose.yml"),
+      composeFile,
       ...cmds,
     ]);
   }
 
   async up() {
-    const file = Bun.file(path.join(this.paths.root, "docker-compose.yml"));
+    const filePath = path.join(this.paths.root, "docker-compose.yml");
+    const file = Bun.file(filePath);
     if (!(await file.exists()))
-      throw new Error("No docker-compose.yml file found");
+      throw new Error(`No docker-compose.yml file found at "${filePath}"`);
 
     const composeConfig = dockerComposeSchema.parse(
       Bun.YAML.parse(await file.text())
     );
 
     // Set project name
-    composeConfig.name = this.appName;
+    composeConfig.name = this.options.appName;
 
     // Create local network for this stack and attach it to traefik
-    const networkName = `${this.appName}_default`;
+    const networkName = `${this.options.appName}_default`;
 
     exec(
       ["docker", "network", "create", networkName],
@@ -113,13 +150,12 @@ export class Project {
       external: true,
     };
 
-    // console.log(Object.entries(composeConfig.services));
     for (const [name, service] of Object.entries(composeConfig.services)) {
       // Namespace container names
       if (service.container_name) {
-        service.container_name = `${this.appName}_${service.container_name}`;
+        service.container_name = `${this.options.appName}_${service.container_name}`;
       } else {
-        service.container_name = `${this.appName}_${name}`;
+        service.container_name = `${this.options.appName}_${name}`;
       }
 
       // Add networks
@@ -144,8 +180,6 @@ export class Project {
         const basename = path.basename(volume.target);
         volume.source = path.join(this.paths.temp, "dynamic-volumes", basename);
 
-        console.log("DYNAMIC VOLUME", volume);
-
         await Bun.write(volume.source, volume.content);
 
         delete volume.content;
@@ -168,8 +202,8 @@ export class Project {
 
     const envContent =
       `# ---------- ADDED ----------\n\n` +
-      `APP_NAME="${this.appName.replaceAll('"', '\\"')}"\n` +
-      `APP_NAME_FQDN="${toDomainNamePart(this.appName)}"\n` +
+      `APP_NAME="${this.options.appName.replaceAll('"', '\\"')}"\n` +
+      `APP_NAME_FQDN="${toDomainNamePart(this.options.appName)}"\n` +
       `\n` +
       `# ---------- ORIGINAL ----------\n\n` +
       existingEnvContent;
@@ -180,6 +214,10 @@ export class Project {
     this.compose(["up", "--force-recreate", "--build", "-d"]);
   }
 
+  down() {
+    this._cleanup();
+  }
+
   private _cleanup() {
     // Compose down
     this.compose(["down", "--volumes", "--remove-orphans"]);
@@ -188,35 +226,37 @@ export class Project {
     exec(["rm", "-rf", this.paths.temp]);
   }
 
-  private async _clone({ repo, branch }: { repo: string; branch: string }) {
-    // exec(["rm", "-rf", targetDirectory]);
-
-    if (await Bun.file(path.join(this.paths.root, ".git")).exists()) {
+  private async _cloneOrPull({
+    repo,
+    branch,
+  }: {
+    repo: string;
+    branch: string;
+  }) {
+    if (existsSync(path.join(this.paths.projectDirectory, ".git"))) {
       exec(["git", "pull", "origin", branch], {
-        cwd: this.#cwd,
+        cwd: this.paths.projectDirectory,
       });
     } else {
-      exec(
-        [
-          "git",
-          "clone",
-          "--depth",
-          "1",
-          "--single-branch",
-          "--branch",
-          branch,
-          repo,
-          this.paths.root,
-        ],
-        {
-          cwd: this.#cwd,
-        }
-      );
+      exec(["mkdir", "-p", this.paths.projectDirectory]);
+
+      exec([
+        "git",
+        "clone",
+        "--depth",
+        "1",
+        "--single-branch",
+        "--branch",
+        branch,
+        repo,
+        this.paths.projectDirectory,
+      ]);
     }
   }
 
   private async _copyLocal({ sourcePath }: { sourcePath: string }) {
     exec(["rm", "-rf", this.paths.root]);
+    exec(["mkdir", "-p", this.paths.root]);
     exec(["cp", "-R", sourcePath + "/", this.paths.root]);
   }
 }
@@ -229,7 +269,7 @@ const PATHS = {
   },
 };
 
-type ProjectSource =
+export type ProjectSource =
   | {
       type: "git";
       repo: string;
