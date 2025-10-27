@@ -1,11 +1,10 @@
 import { exec } from "./lib";
 import { Project, type ProjectSource } from "./project";
-import { customAlphabet } from "nanoid";
 import { parseArgs } from "node:util";
 
-const {
+let {
   positionals: [appTemplateName],
-  values: { pr: pullRequest, repo, dir: directory, root },
+  values: { pr: pullRequest, repo, dir: directory, root, branch },
 } = parseArgs({
   allowPositionals: true,
   options: {
@@ -21,6 +20,9 @@ const {
     root: {
       type: "string",
     },
+    branch: {
+      type: "string",
+    },
   },
 });
 
@@ -30,9 +32,10 @@ if (!appTemplateName) {
 }
 
 let appName = appTemplateName;
-let branch: string | undefined;
 
-if (pullRequest) {
+if (branch) {
+  // noop
+} else if (pullRequest) {
   appName += `-pr-${pullRequest}`;
 
   const pullRequestJson:
