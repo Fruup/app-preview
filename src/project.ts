@@ -1,3 +1,5 @@
+// TODO: remove me
+
 import { exec, toDomainNamePart } from "./lib";
 import { dockerComposeSchema } from "./schemas/compose";
 import path from "path";
@@ -47,20 +49,29 @@ export class Project {
     cmds: string[],
     options: {
       noEnvFile?: boolean;
-    } = {}
+    } = {},
+    options1?: Parameters<typeof exec>[1],
+    options2?: Parameters<typeof exec>[2]
   ) {
-    return exec([
-      "docker",
-      "compose",
-      !options.noEnvFile && ["--env-file", path.join(this.paths.temp, ".env")],
-      "--project-name",
-      this.appName,
-      "--project-directory",
-      this.paths.root,
-      "-f",
-      path.join(this.paths.temp, "docker-compose.yml"),
-      ...cmds,
-    ]);
+    return exec(
+      [
+        "docker",
+        "compose",
+        !options.noEnvFile && [
+          "--env-file",
+          path.join(this.paths.temp, ".env"),
+        ],
+        "--project-name",
+        this.appName,
+        "--project-directory",
+        this.paths.root,
+        "-f",
+        path.join(this.paths.temp, "docker-compose.yml"),
+        ...cmds,
+      ],
+      options1,
+      options2
+    );
   }
 
   async up() {
@@ -180,9 +191,18 @@ export class Project {
     this.compose(["up", "--force-recreate", "--build", "-d"]);
   }
 
+  down() {
+    this._cleanup();
+  }
+
   private _cleanup() {
     // Compose down
-    this.compose(["down", "--volumes", "--remove-orphans"]);
+    this.compose(
+      ["down", "--volumes", "--remove-orphans"],
+      {},
+      {},
+      { noFailEarly: true }
+    );
 
     // Clean up temp directory
     exec(["rm", "-rf", this.paths.temp]);
@@ -217,6 +237,7 @@ export class Project {
 
   private async _copyLocal({ sourcePath }: { sourcePath: string }) {
     exec(["rm", "-rf", this.paths.root]);
+    exec(["mkdir", "-p", this.paths.root]);
     exec(["cp", "-R", sourcePath + "/", this.paths.root]);
   }
 }
