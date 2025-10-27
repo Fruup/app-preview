@@ -1,3 +1,4 @@
+import { OnePasswordEnvGenerator } from "./env";
 import { exec } from "./lib";
 import { Project, type ProjectSource } from "./project";
 import { parseArgs } from "node:util";
@@ -90,6 +91,14 @@ if (!source) {
 
 console.log("Creating project with source:", source);
 
-const project = await Project.create({ appName, source, root });
+const project = await Project.create({
+  appName,
+  source,
+  root,
+  envGenerator: new OnePasswordEnvGenerator({
+    accessToken: Bun.env.OP_ACCESS_TOKEN!,
+    itemUri: "op://Work/r37qblv6zfsowdhrthwigvlnii/env",
+  }),
+});
 
 await project.up();

@@ -2,12 +2,14 @@ import { existsSync } from "fs";
 import { exec, toDomainNamePart } from "./lib";
 import { dockerComposeSchema } from "./schemas/compose";
 import path from "path";
+import type { EnvGenerator } from "../src/env";
 
 export interface ProjectOptions {
   appName: string;
   source: ProjectSource;
   /** Relative to the project's directory */
   root?: string;
+  envGenerator?: EnvGenerator;
 }
 
 export class Project {
@@ -17,13 +19,15 @@ export class Project {
     appName,
     source,
     root,
+    envGenerator,
   }: {
     appName: string;
     source: ProjectSource;
     root?: string;
+    envGenerator?: EnvGenerator;
   }) {
-    const project = new Project({ appName, source, root });
-    project._cleanup();
+    const project = new Project({ appName, source, root, envGenerator });
+    await project._cleanup();
 
     if (source.type === "git") {
       await project._cloneOrPull({
@@ -76,6 +80,7 @@ export class Project {
     cmds: string[],
     options: {
       noEnvFile?: boolean;
+      noFailEarly?: boolean;
     } = {}
   ) {
     const composeFile = path.join(this.paths.temp, "docker-compose.yml");
@@ -85,18 +90,22 @@ export class Project {
     const envFile = path.join(this.paths.temp, ".env");
     const envFileExists = await Bun.file(envFile).exists();
 
-    return exec([
-      "docker",
-      "compose",
-      !options.noEnvFile && envFileExists && ["--env-file", envFile],
-      "--project-name",
-      this.options.appName,
-      "--project-directory",
-      this.paths.root,
-      "-f",
-      composeFile,
-      ...cmds,
-    ]);
+    return exec(
+      [
+        "docker",
+        "compose",
+        !options.noEnvFile && envFileExists && ["--env-file", envFile],
+        "--project-name",
+        this.options.appName,
+        "--project-directory",
+        this.paths.root,
+        "-f",
+        composeFile,
+        ...cmds,
+      ],
+      {},
+      { noFailEarly: options.noFailEarly }
+    );
   }
 
   async up() {
@@ -115,7 +124,7 @@ export class Project {
     // Create local network for this stack and attach it to traefik
     const networkName = `${this.options.appName}_default`;
 
-    exec(
+    await exec(
       ["docker", "network", "create", networkName],
       {},
       {
@@ -129,7 +138,7 @@ export class Project {
       }
     );
 
-    exec(
+    await exec(
       ["docker", "network", "connect", networkName, traefikContainerName],
       {},
       {
@@ -189,7 +198,6 @@ export class Project {
     const newConfigYaml = Bun.YAML.stringify(composeConfig, null, 2);
 
     // Write processed file
-    console.log(newConfigYaml);
     await Bun.write(
       path.join(this.paths.temp, "docker-compose.yml"),
       newConfigYaml
@@ -197,8 +205,15 @@ export class Project {
 
     // Process .env
     let existingEnvContent = "";
-    const envFile = Bun.file(path.join(this.paths.root, ".env"));
-    if (await envFile.exists()) existingEnvContent = await envFile.text();
+    if (this.options.envGenerator) {
+      existingEnvContent = await this.options.envGenerator.generate();
+    } else {
+      const envFilePath = path.join(this.paths.root, ".env");
+      const envFile = Bun.file(envFilePath);
+
+      if (await envFile.exists()) existingEnvContent = await envFile.text();
+      else console.warn(`No .env file found at ${envFilePath}`);
+    }
 
     const envContent =
       `# ---------- ADDED ----------\n\n` +
@@ -214,16 +229,18 @@ export class Project {
     this.compose(["up", "--force-recreate", "--build", "-d"]);
   }
 
-  down() {
-    this._cleanup();
+  async down() {
+    return this._cleanup();
   }
 
-  private _cleanup() {
+  private async _cleanup() {
     // Compose down
-    this.compose(["down", "--volumes", "--remove-orphans"]);
+    await this.compose(["down", "--volumes", "--remove-orphans"], {
+      noFailEarly: true,
+    });
 
     // Clean up temp directory
-    exec(["rm", "-rf", this.paths.temp]);
+    await exec(["rm", "-rf", this.paths.temp]);
   }
 
   private async _cloneOrPull({
@@ -234,13 +251,13 @@ export class Project {
     branch: string;
   }) {
     if (existsSync(path.join(this.paths.projectDirectory, ".git"))) {
-      exec(["git", "pull", "origin", branch], {
+      await exec(["git", "pull", "origin", branch], {
         cwd: this.paths.projectDirectory,
       });
     } else {
-      exec(["mkdir", "-p", this.paths.projectDirectory]);
+      await exec(["mkdir", "-p", this.paths.projectDirectory]);
 
-      exec([
+      await exec([
         "git",
         "clone",
         "--depth",
@@ -255,9 +272,9 @@ export class Project {
   }
 
   private async _copyLocal({ sourcePath }: { sourcePath: string }) {
-    exec(["rm", "-rf", this.paths.root]);
-    exec(["mkdir", "-p", this.paths.root]);
-    exec(["cp", "-R", sourcePath + "/", this.paths.root]);
+    await exec(["rm", "-rf", this.paths.root]);
+    await exec(["mkdir", "-p", this.paths.root]);
+    await exec(["cp", "-R", sourcePath + "/", this.paths.root]);
   }
 }
 

@@ -4,6 +4,7 @@
     "": {
       "name": "app-preview",
       "dependencies": {
+        "@1password/sdk": "^0.3.1",
         "nanoid": "^5.1.6",
         "zod": "^4.1.12",
       },
@@ -16,6 +17,10 @@
     },
   },
   "packages": {
+    "@1password/sdk": ["@1password/sdk@0.3.1", "", { "dependencies": { "@1password/sdk-core": "0.3.1" } }, "sha512-20zbQfqsjcECT0gvnAw4zONJDt3XQgNH946pZR0NV1Qxukyaz/DKB0cBnBNCCEWZg93Bah8poaR6gJCyuNX14w=="],
+
+    "@1password/sdk-core": ["@1password/sdk-core@0.3.1", "", {}, "sha512-zFkbRznmE47kpke10OpO/9R0AF5csNWS+naFbadgXuFX1LlxY+2C28NSKbCXhLTqmcuWifBfPdZQ728GJ1i5xg=="],
+
     "@types/bun": ["@types/bun@1.3.1", "", { "dependencies": { "bun-types": "1.3.1" } }, "sha512-4jNMk2/K9YJtfqwoAa28c8wK+T7nvJFOjxI4h/7sORWcypRNxBpr+TPNaCfVWq70tLCJsqoFwcf0oI0JU/fvMQ=="],
 
     "@types/node": ["@types/node@24.9.1", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg=="],
