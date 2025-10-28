@@ -294,7 +294,12 @@ export class Project {
   private async _copyLocal({ sourcePath }: { sourcePath: string }) {
     await exec(["rm", "-rf", this.paths.projectDirectory]);
     await exec(["mkdir", "-p", this.paths.projectDirectory]);
-    await exec(["cp", "-R", sourcePath + "/", this.paths.projectDirectory]);
+    await exec([
+      "cp",
+      "-R",
+      path.join(sourcePath, "**/*"),
+      this.paths.projectDirectory + "/",
+    ]);
   }
 }
 
