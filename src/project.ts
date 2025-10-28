@@ -297,8 +297,8 @@ export class Project {
     await exec([
       "cp",
       "-R",
-      path.join(sourcePath, "**/*"),
-      this.paths.projectDirectory + "/",
+      path.join(sourcePath, "*"),
+      this.paths.projectDirectory,
     ]);
   }
 }
