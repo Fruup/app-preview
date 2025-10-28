@@ -9,7 +9,12 @@ apt-get install -y curl unzip
 curl -fsSL https://bun.com/install | bash
 
 # Install Docker
-curl -fsSL https://get.docker.com/ | sh
+if ! command -v docker &> /dev/null
+then
+	curl -fsSL https://get.docker.com/ | sh
+else
+	echo "Docker is already installed."
+fi
 
 # Install Docker Compose
 DOCKER_COMPOSE_VERSION="2.40.2"
@@ -18,8 +23,9 @@ chmod +x /usr/local/bin/docker-compose
 
 # Verify installations
 echo "Verifying installations..."
+
 bun --version
 docker --version
-docker-compose --version
+docker compose version
 
 echo "🚀 Successfully installed"
