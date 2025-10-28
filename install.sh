@@ -9,6 +9,8 @@ apt-get install -y curl unzip
 curl -fsSL https://bun.com/install | bash
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
+echo 'export BUN_INSTALL="$HOME/.bun"' >> ~/.bashrc
+echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> ~/.bashrc
 
 # Install Docker
 if ! command -v docker &> /dev/null
@@ -26,6 +28,7 @@ mkdir -p $DOCKER_CONFIG/cli-plugins
 curl -L "https://github.com/docker/compose/releases/download/v$DOCKER_COMPOSE_VERSION/docker-compose-$(uname -s)-$(uname -m)" -o $DOCKER_CONFIG/cli-plugins/docker-compose
 chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 export PATH="$DOCKER_CONFIG/cli-plugins:$PATH"
+echo 'export PATH="$HOME/.docker/cli-plugins:$PATH"' >> ~/.bashrc
 
 # Verify installations
 echo "Verifying installations..."
