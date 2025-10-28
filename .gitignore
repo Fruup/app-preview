@@ -38,3 +38,5 @@ apps/
 
 traefik/certs/
 traefik/letsencrypt/
+
+sources-private/

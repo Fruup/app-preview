@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Install bun
 curl -fsSL https://bun.com/install | bash
 
