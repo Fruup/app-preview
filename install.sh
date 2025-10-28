@@ -22,7 +22,7 @@ fi
 export DOCKER_CONFIG=$HOME/.docker
 DOCKER_COMPOSE_VERSION="2.40.2"
 
-RUN mkdir -p $DOCKER_CONFIG/cli-plugins
+mkdir -p $DOCKER_CONFIG/cli-plugins
 curl -L "https://github.com/docker/compose/releases/download/$DOCKER_COMPOSE_VERSION/docker-compose-$(uname -s)-$(uname -m)" -o $DOCKER_CONFIG/cli-plugins/docker-compose
 chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
 
