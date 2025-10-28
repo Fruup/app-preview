@@ -1,4 +1,5 @@
 name: app-preview-traefik
+
 services:
   traefik:
     container_name: app-preview-traefik
@@ -13,8 +14,3 @@ services:
       - ./certs:/certs:Z
       - ./letsencrypt:/letsencrypt:Z
     restart: unless-stopped
-    networks:
-      - app-preview_traefik
-networks:
-  app-preview_traefik:
-    external: true
