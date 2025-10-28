@@ -10,8 +10,15 @@ api:
 entryPoints:
   web:
     address: ":80"
-  websecure:
+  web-secure:
     address: ":443"
+    http:
+      tls:
+        certResolver: letsencrypt
+        domains:
+          - main: "*.traefik.me"
+            # sans:
+            #   - "traefik.me"
 
 providers:
   docker:
@@ -22,10 +29,11 @@ providers:
 certificatesResolvers:
   letsencrypt:
     acme:
-      email: your-email@example.com
-      storage: /acme.json
+      email: info@leonscherer.com
+      storage: /letsencrypt/acme.json
       httpChallenge:
         entryPoint: web
+      caServer: https://acme-staging-v02.api.letsencrypt.org/directory
 # Optional: Enable access logs
 # accessLog: {}
 

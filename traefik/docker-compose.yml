@@ -10,7 +10,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik.yml:/etc/traefik/traefik.yml:Z
-      # - ./certs:/certs:Z
+      - ./certs:/certs:Z
+      - ./letsencrypt:/letsencrypt:Z
     restart: unless-stopped
     networks:
       - app-preview_traefik

@@ -148,7 +148,7 @@ const deploySchema = z.object({
 const buildSchema = z.union([
   z.string(),
   z.object({
-    context: z.string(),
+    context: z.string().optional(),
     dockerfile: z.string().optional(),
     args: mapOrArray.optional(),
     cache_from: z.array(z.string()).optional(),

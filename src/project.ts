@@ -9,6 +9,7 @@ export interface ProjectOptions {
   source: ProjectSource;
   /** Relative to the project's directory */
   root?: string;
+  dockerComposePath?: string;
   envGenerator?: EnvGenerator;
 }
 
@@ -19,14 +20,22 @@ export class Project {
     appName,
     source,
     root,
+    dockerComposePath,
     envGenerator,
   }: {
     appName: string;
     source: ProjectSource;
     root?: string;
+    dockerComposePath?: string;
     envGenerator?: EnvGenerator;
   }) {
-    const project = new Project({ appName, source, root, envGenerator });
+    const project = new Project({
+      appName,
+      source,
+      root,
+      dockerComposePath,
+      envGenerator,
+    });
     await project._cleanup();
 
     if (source.type === "git") {
@@ -73,6 +82,9 @@ export class Project {
       get temp() {
         return path.join(this.root, ".app-preview");
       },
+      get dockerCompose() {
+        return self.options.dockerComposePath ?? "docker-compose.yml";
+      },
     };
   }
 
@@ -109,7 +121,15 @@ export class Project {
   }
 
   async up() {
-    const filePath = path.join(this.paths.root, "docker-compose.yml");
+    // Perform init script
+    // const initScriptPath = path.join(this.paths.root, "init.sh");
+    // const initScriptFile = Bun.file(initScriptPath);
+    // if (await initScriptFile.exists()) {
+    //   // await exec(["chmod", "+x", initScriptPath]);
+    //   await exec([initScriptPath], { cwd: this.paths.root });
+    // }
+
+    const filePath = path.join(this.paths.root, this.paths.dockerCompose);
     const file = Bun.file(filePath);
     if (!(await file.exists()))
       throw new Error(`No docker-compose.yml file found at "${filePath}"`);
@@ -272,9 +292,9 @@ export class Project {
   }
 
   private async _copyLocal({ sourcePath }: { sourcePath: string }) {
-    await exec(["rm", "-rf", this.paths.root]);
-    await exec(["mkdir", "-p", this.paths.root]);
-    await exec(["cp", "-R", sourcePath + "/", this.paths.root]);
+    await exec(["rm", "-rf", this.paths.projectDirectory]);
+    await exec(["mkdir", "-p", this.paths.projectDirectory]);
+    await exec(["cp", "-R", sourcePath + "/", this.paths.projectDirectory]);
   }
 }
 
