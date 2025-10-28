@@ -7,7 +7,7 @@ apt-get install -y curl unzip
 
 # Install bun
 curl -fsSL https://bun.com/install | bash
-# export BUN_INSTALL="$HOME/.bun"
+export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
 # Install Docker
