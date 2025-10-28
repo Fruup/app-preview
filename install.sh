@@ -38,3 +38,4 @@ docker --version
 docker compose version
 
 echo "🚀 Successfully installed"
+echo "Please restart your shell or run: source ~/.bashrc"
