@@ -121,13 +121,7 @@ export class Project {
   }
 
   async up() {
-    // Perform init script
-    // const initScriptPath = path.join(this.paths.root, "init.sh");
-    // const initScriptFile = Bun.file(initScriptPath);
-    // if (await initScriptFile.exists()) {
-    //   // await exec(["chmod", "+x", initScriptPath]);
-    //   await exec([initScriptPath], { cwd: this.paths.root });
-    // }
+    const envFilePath = path.join(this.paths.temp, ".env");
 
     const filePath = path.join(this.paths.root, this.paths.dockerCompose);
     const file = Bun.file(filePath);
@@ -180,6 +174,12 @@ export class Project {
     };
 
     for (const [name, service] of Object.entries(composeConfig.services)) {
+      // Add env file
+      service.env_file ??= [];
+      if (typeof service.env_file === "string")
+        service.env_file = [service.env_file];
+      service.env_file.push(envFilePath);
+
       // Namespace container names
       if (service.container_name) {
         service.container_name = `${this.options.appName}_${service.container_name}`;
@@ -243,7 +243,7 @@ export class Project {
       `# ---------- ORIGINAL ----------\n\n` +
       existingEnvContent;
 
-    await Bun.write(path.join(this.paths.temp, ".env"), envContent);
+    await Bun.write(envFilePath, envContent);
 
     // Start the stack
     this.compose(["up", "--force-recreate", "--build", "-d"]);
