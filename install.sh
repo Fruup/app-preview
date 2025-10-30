@@ -3,7 +3,7 @@
 set -e
 
 sudo apt-get update
-sudo apt-get install -y curl unzip
+sudo apt-get install -y curl unzip gh
 
 # Install bun
 curl -fsSL https://bun.com/install | bash
