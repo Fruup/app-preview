@@ -246,7 +246,7 @@ export class Project {
     await Bun.write(envFilePath, envContent);
 
     // Start the stack
-    this.compose(["up", "--force-recreate", "--build", "-d"]);
+    this.compose(["up", "--force-recreate", "--build", "-d", "--wait"]);
   }
 
   async down() {
