@@ -1,13 +1,11 @@
 import { Project } from "./project";
 
 const project = await Project.create({
-  appName: "solarstream-app",
+  appName: "app-1",
   source: {
     type: "local",
-    path: "./sources/solarstream-app",
+    path: "./sources/app-1",
   },
-  root: ".docker",
-  // dockerComposePath: ".docker/docker-compose.yml",
 });
 
 await project.up();

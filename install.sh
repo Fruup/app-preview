@@ -6,11 +6,16 @@ sudo apt-get update
 sudo apt-get install -y curl unzip gh
 
 # Install bun
-curl -fsSL https://bun.com/install | bash
-export BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"
-echo 'export BUN_INSTALL="$HOME/.bun"' >> ~/.bashrc
-echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> ~/.bashrc
+if ! command -v bun &> /dev/null
+then
+	curl -fsSL https://bun.com/install | bash
+	export BUN_INSTALL="$HOME/.bun"
+	export PATH="$BUN_INSTALL/bin:$PATH"
+	echo 'export BUN_INSTALL="$HOME/.bun"' >> ~/.bashrc
+	echo 'export PATH="$BUN_INSTALL/bin:$PATH"' >> ~/.bashrc
+else
+	echo "Bun is already installed."
+fi
 
 # Install Docker
 if ! command -v docker &> /dev/null
@@ -36,6 +41,9 @@ echo "Verifying installations..."
 bun --version
 docker --version
 docker compose version
+
+# Start traefik
+docker compose -f ./traefik up --build -d --wait
 
 echo "🚀 Successfully installed"
 echo "Please restart your shell or run: source ~/.bashrc"

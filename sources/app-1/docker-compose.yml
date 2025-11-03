@@ -41,15 +41,6 @@ services:
       NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
       # Uncomment to use Big Query backend for analytics
       # NEXT_ANALYTICS_BACKEND_PROVIDER: bigquery
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.${APP_NAME_FQDN}_studio.rule=Host(`studio.${APP_NAME_FQDN}.traefik.me`)"
-      - "traefik.http.routers.${APP_NAME_FQDN}_studio.entrypoints=web"
-      - "traefik.http.services.${APP_NAME_FQDN}_studio.loadbalancer.server.port=3000"
-      - "traefik.http.services.${APP_NAME_FQDN}_studio.loadbalancer.server.scheme=http"
-      # basic auth
-      - "traefik.http.middlewares.${APP_NAME_FQDN}-studio-auth.basicAuth.users=${STUDIO_BASIC_AUTH_USERS:?}"
-      - "traefik.http.routers.${APP_NAME_FQDN}_studio.middlewares=${APP_NAME_FQDN}-studio-auth"
 
   kong:
     container_name: supabase-kong

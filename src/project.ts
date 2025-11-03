@@ -3,38 +3,48 @@ import { exec, toDomainNamePart } from "./lib";
 import { dockerComposeSchema } from "./schemas/compose";
 import path from "path";
 import type { EnvGenerator } from "../src/env";
+import { OnePasswordEnvGenerator } from "../src/env";
 
 export interface ProjectOptions {
   appName: string;
   source: ProjectSource;
+}
+
+export interface ProjectConfig {
   /** Relative to the project's directory */
   root?: string;
   dockerComposePath?: string;
   envGenerator?: EnvGenerator;
+  expose?: {
+    /** Maps a service (same as in the compose file) to its domain */
+    [serviceKey: string]: {
+      domain?: string;
+      /**
+       * Basic auth string(s) in the format "user:hashed_password".
+       * Use the following command to generate a bcrypt hash:
+       *
+       *   htpasswd -nbB <user> <password>
+       */
+      basicAuth?: string | string[];
+    };
+  };
 }
 
 export class Project {
-  private constructor(public readonly options: ProjectOptions) {}
+  private constructor(
+    public readonly options: ProjectOptions & ProjectConfig
+  ) {}
 
   static async create({
     appName,
     source,
-    root,
-    dockerComposePath,
-    envGenerator,
   }: {
     appName: string;
     source: ProjectSource;
-    root?: string;
-    dockerComposePath?: string;
-    envGenerator?: EnvGenerator;
   }) {
-    const project = new Project({
+    let project = new Project({
       appName,
       source,
-      root,
-      dockerComposePath,
-      envGenerator,
     });
     await project._cleanup();
 
@@ -47,6 +57,31 @@ export class Project {
       await project._copyLocal({ sourcePath: source.path });
     } else {
       throw new Error("Unknown project source type");
+    }
+
+    // Load the config
+    try {
+      global.defineConfig = function (getter): ProjectConfig {
+        return getter({
+          appName: project.options.appName,
+          appNameDomainInfix: toDomainNamePart(project.options.appName),
+          OnePasswordEnvGenerator,
+        });
+      };
+
+      // TODO: make more flexible
+      const { default: config } = await import(
+        path.join(project.paths.projectDirectory, "preview/config.ts")
+      );
+
+      // TODO: ugly
+      project = new Project({
+        ...project.options,
+        ...config,
+      });
+    } catch (e) {
+      console.error("Error loading config file:", e);
+      throw new Error("Failed to load project config");
     }
 
     return project;
@@ -199,6 +234,34 @@ export class Project {
       service.labels ??= [];
       service.labels.push(`traefik.docker.network=${networkName}`);
 
+      // Add domain labels
+      const exposeConfig = this.options.expose?.[name];
+      const domain = exposeConfig?.domain;
+
+      if (domain) {
+        // TODO: https
+        service.labels.push(`traefik.enable=true`);
+        service.labels.push(
+          `traefik.http.routers.${name}.rule=Host(\`${domain}\`)`
+        );
+        service.labels.push(`traefik.http.routers.${name}.entrypoints=web`);
+      }
+
+      // Add basic auth labels
+      const basicAuth = exposeConfig?.basicAuth;
+      if (basicAuth) {
+        const users = (typeof basicAuth === "string" ? [basicAuth] : basicAuth)
+          .join(",")
+          .replaceAll("$", "$$$$"); // Escape $ for docker compose (no idea why 4 are needed)
+
+        service.labels.push(
+          `traefik.http.middlewares.${name}-auth.basicAuth.users=${users}`
+        );
+        service.labels.push(
+          `traefik.http.routers.${name}.middlewares=${name}-auth`
+        );
+      }
+
       // Create dynamic mounts
       for (const volume of service.volumes ?? []) {
         if (typeof volume === "string") continue;
@@ -238,7 +301,7 @@ export class Project {
     const envContent =
       `# ---------- ADDED ----------\n\n` +
       `APP_NAME="${this.options.appName.replaceAll('"', '\\"')}"\n` +
-      `APP_NAME_FQDN="${toDomainNamePart(this.options.appName)}"\n` +
+      `APP_NAME_DOMAIN_INFIX="${toDomainNamePart(this.options.appName)}"\n` +
       `\n` +
       `# ---------- ORIGINAL ----------\n\n` +
       existingEnvContent;
