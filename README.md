@@ -1,15 +1,9 @@
-# app-preview
+# App Preview
 
-To install dependencies:
+Kind of like Coolify & Dokploy.
 
-```bash
-bun install
-```
+## TODO
 
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.3.0. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+- [ ] quickly spin up/down projects from git repos
+  - [ ] support for private repos
+  - [ ]

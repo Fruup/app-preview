@@ -1,6 +1,6 @@
 import { Project } from "./project";
 
-const project = await Project.create({
+const project = new Project({
   appName: "app-1",
   source: {
     type: "local",
@@ -8,4 +8,5 @@ const project = await Project.create({
   },
 });
 
-await project.up();
+// await project.up();
+console.log(await project.status());

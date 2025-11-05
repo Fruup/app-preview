@@ -4,6 +4,7 @@ import { dockerComposeSchema } from "./schemas/compose";
 import path from "path";
 import type { EnvGenerator } from "../src/env";
 import { OnePasswordEnvGenerator } from "../src/env";
+import type { ContainerStatus } from "./types";
 
 export interface ProjectOptions {
   appName: string;
@@ -31,62 +32,72 @@ export interface ProjectConfig {
 }
 
 export class Project {
-  private constructor(
-    public readonly options: ProjectOptions & ProjectConfig
-  ) {}
+  #isInitialized = false;
+  #options: ProjectOptions & ProjectConfig;
 
-  static async create({
-    appName,
-    source,
-  }: {
-    appName: string;
-    source: ProjectSource;
-  }) {
-    let project = new Project({
-      appName,
-      source,
-    });
-    await project._cleanup();
+  constructor(options: ProjectOptions & ProjectConfig) {
+    this.#options = options;
+  }
 
-    if (source.type === "git") {
-      await project._cloneOrPull({
-        repo: source.repo,
-        branch: source.branch,
+  get options() {
+    return this.#options;
+  }
+
+  async initialize() {
+    if (this.#isInitialized) return;
+
+    await this._cleanup();
+
+    if (this.options.source.type === "git") {
+      await this._cloneOrPull({
+        repo: this.options.source.repo,
+        branch: this.options.source.branch,
       });
-    } else if (source.type === "local") {
-      await project._copyLocal({ sourcePath: source.path });
+    } else if (this.options.source.type === "local") {
+      await this._copyLocal({ sourcePath: this.options.source.path });
     } else {
       throw new Error("Unknown project source type");
     }
 
     // Load the config
     try {
-      global.defineConfig = function (getter): ProjectConfig {
+      const configFilePath = await new Bun.Glob("**/app-preview.config.ts")
+        .scan({
+          cwd: this.paths.projectDirectory,
+          onlyFiles: true,
+        })
+        .next()
+        .then(({ value }) => value as string | undefined);
+
+      if (!configFilePath || !(await Bun.file(configFilePath).exists())) {
+        throw new Error("No app-preview.config.ts found");
+      }
+
+      global.defineConfig = (getter): ProjectConfig => {
         return getter({
-          appName: project.options.appName,
-          appNameDomainInfix: toDomainNamePart(project.options.appName),
+          appName: this.options.appName,
+          appNameDomainInfix: toDomainNamePart(this.options.appName),
           OnePasswordEnvGenerator,
         });
       };
 
       // TODO: make more flexible
-      const { default: config } = await import(
-        path.join(project.paths.projectDirectory, "preview/config.ts")
-      );
+      const { default: config } = await import(configFilePath);
 
       // TODO: ugly
-      project = new Project({
-        ...project.options,
+      this.#options = {
+        ...this.#options,
         ...config,
-      });
+      };
     } catch (e) {
       console.error("Error loading config file:", e);
       throw new Error("Failed to load project config");
     }
 
-    return project;
+    return this;
   }
 
+  /** Unfinished */
   static async load(appName: string) {
     const file = Bun.file(
       path.join(PATHS.apps, ".stored", appName, "project.json")
@@ -96,12 +107,30 @@ export class Project {
     return new Project(await file.json());
   }
 
+  /** Unfinished */
   async store() {
     const json = JSON.stringify(this, null, 2);
     await Bun.write(
       path.join(PATHS.apps, ".stored", this.options.appName, "project.json"),
       json
     );
+  }
+
+  async status(): Promise<ContainerStatus[] | null> {
+    const statusProcess = await this.compose(["ps", "--format", "json"]);
+    if (!statusProcess) {
+      console.warn("No status process found");
+      return null;
+    }
+
+    const result = statusProcess.stdout
+      .toString()
+      .split("\n")
+      .filter(Boolean)
+      .map((x) => JSON.parse(x) as ContainerStatus);
+
+    if (!result.length) return null;
+    return result;
   }
 
   get paths() {
@@ -156,6 +185,8 @@ export class Project {
   }
 
   async up() {
+    await this.initialize();
+
     const envFilePath = path.join(this.paths.temp, ".env");
 
     const filePath = path.join(this.paths.root, this.paths.dockerCompose);
