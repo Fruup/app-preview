@@ -68,7 +68,12 @@ export class Project {
           onlyFiles: true,
         })
         .next()
-        .then(({ value }) => value as string | undefined);
+        .then(({ value }) => {
+          const relativePath: string | undefined = value;
+          return relativePath
+            ? path.join(this.paths.projectDirectory, relativePath)
+            : undefined;
+        });
 
       if (!configFilePath || !(await Bun.file(configFilePath).exists())) {
         throw new Error("No app-preview.config.ts found");
