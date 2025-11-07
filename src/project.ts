@@ -1,10 +1,11 @@
 import { existsSync } from "fs";
-import { exec, toDomainNamePart } from "./lib";
+import { exec } from "./lib";
 import { dockerComposeSchema } from "./schemas/compose";
 import path from "path";
 import type { EnvGenerator } from "../src/env";
 import { OnePasswordEnvGenerator } from "../src/env";
 import type { ContainerStatus } from "./types";
+import { toDomainNamePart } from "./utils";
 
 export interface ProjectOptions {
   appName: string;

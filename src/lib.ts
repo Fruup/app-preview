@@ -50,15 +50,6 @@ export async function exec(
   return result;
 }
 
-// Converts an arbitrary string to a FQDN
-export const toDomainNamePart = (name: string) =>
-  name
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, "-")
-    .replaceAll(/--+/g, "-")
-    .replace(/^-+/, "")
-    .replace(/-+$/, "");
-
 const mapCmd = (i: unknown): string[] => {
   if (typeof i === "string") return [i];
   if (Array.isArray(i)) return i.flatMap(mapCmd);

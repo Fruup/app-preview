@@ -1,10 +1,34 @@
 import { Command } from "commander";
 import { Project } from "../project";
 import * as prompts from "@clack/prompts";
+import * as colors from "nanocolors";
+import { configureGithubIntegration } from "../setup";
 
 const program = new Command();
 
 program.name("app-preview").description("CLI for App Preview").version("0.0.1");
+
+program
+  .name("app-preview")
+  .command("github")
+  .command("setup")
+  .description("Set up GitHub integration")
+  .action(configureGithubIntegration);
+
+program
+  .command("config")
+  .command("edit")
+  .description("Edit the app-preview.config.json file")
+  .action(async () => {
+    if (!(await Bun.file("./app-preview.config.json").exists()))
+      await Bun.write("./app-preview.config.json", "{}");
+
+    prompts.log.message(
+      `Open ${colors.bold("app-preview.config.json")} in your editor.`
+    );
+
+    Bun.openInEditor("./app-preview.config.json");
+  });
 
 program
   .command("create")
