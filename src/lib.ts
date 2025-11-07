@@ -1,6 +1,48 @@
+import * as prompts from "@clack/prompts";
+import { Readable } from "stream";
+
 const failEarly = true;
 
 export async function exec(
+  cmds_: (string | boolean | number | string[] | undefined | null)[],
+  options?: Bun.SpawnOptions.OptionsObject<"pipe", "pipe", "pipe">,
+  options2: {
+    noFailEarly?: boolean;
+    onError?: (params: {
+      stderr: string;
+      preventFailEarly: () => void;
+    }) => void;
+  } = {}
+) {
+  const cmds = cmds_.flatMap(mapCmd);
+  const proc = Bun.spawn(cmds, options);
+  const log = prompts.taskLog({
+    title: `Executing command: ${cmds.join(" ")}`,
+    input: Readable.from(proc.stdout),
+  });
+
+  await proc.exited;
+
+  if (proc.exitCode === 0) {
+    log.success(`Command succeeded: ${cmds.join(" ")}`);
+  } else {
+    log.error(`Command failed with code ${proc.exitCode}: ${cmds.join(" ")}`);
+    log.error(await proc.stderr.text());
+  }
+
+  // if (
+  //   failEarly &&
+  //   !proc.success &&
+  //   !preventFailEarlyCalled &&
+  //   !options2.noFailEarly
+  // ) {
+  //   process.exit(proc.exitCode);
+  // }
+
+  return proc;
+}
+
+export async function exec2(
   cmds_: (string | boolean | number | string[] | undefined | null)[],
   options?: Bun.SpawnOptions.OptionsObject<"pipe", "pipe", "pipe">,
   options2: {

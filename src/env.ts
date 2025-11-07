@@ -1,30 +1,42 @@
 import { createClient } from "@1password/sdk";
 import pkg from "../package.json";
+import { loadConfig } from "./config";
 
 export abstract class EnvGenerator {
   abstract generate(): Promise<string>;
 }
 
 export class OnePasswordEnvGenerator extends EnvGenerator {
-  #clientPromise: ReturnType<typeof createClient>;
+  static async create(itemUri: string) {
+    const config = await loadConfig();
 
-  constructor(
-    private readonly options: {
-      itemUri: string;
-      accessToken: string;
+    if (!config.onePassword?.serviceToken) {
+      throw new Error(
+        "OnePasswordEnvGenerator requires a One Password service token to be set in the config."
+      );
     }
-  ) {
-    super();
 
-    this.#clientPromise = createClient({
-      auth: options.accessToken,
-      integrationName: pkg.name,
-      integrationVersion: pkg.version,
+    return new OnePasswordEnvGenerator({
+      itemUri,
+      token: config.onePassword.serviceToken,
     });
   }
 
+  private constructor(
+    private readonly options: {
+      itemUri: string;
+      token: string;
+    }
+  ) {
+    super();
+  }
+
   async generate() {
-    const client = await this.#clientPromise;
+    const client = await createClient({
+      auth: this.options.token,
+      integrationName: pkg.name,
+      integrationVersion: pkg.version,
+    });
 
     let env = await client.secrets.resolve(this.options.itemUri);
 

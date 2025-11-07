@@ -8,6 +8,7 @@ interface Config {
     clientSecret: string;
     webhookSecret: string | null;
   } | null;
+  onePassword: { serviceToken: string } | null;
 }
 
 const _empty: Config = {

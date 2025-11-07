@@ -74,16 +74,23 @@ export class Project {
         throw new Error("No app-preview.config.ts found");
       }
 
-      global.defineConfig = (getter): ProjectConfig => {
-        return getter({
+      global.defineConfig = async (getter): Promise<ProjectConfig> => {
+        const result = getter({
           appName: this.options.appName,
           appNameDomainInfix: toDomainNamePart(this.options.appName),
           OnePasswordEnvGenerator,
         });
+
+        return Object.fromEntries(
+          await Promise.all(
+            Object.entries(result).map(async ([k, v]) => [k, await v])
+          )
+        );
       };
 
       // TODO: make more flexible
-      const { default: config } = await import(configFilePath);
+      const { default: config }: { default: ReturnType<typeof defineConfig> } =
+        await import(configFilePath);
 
       // TODO: ugly
       this.#options = {

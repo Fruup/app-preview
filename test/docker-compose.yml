@@ -1,0 +1,8 @@
+services:
+  test:
+    build:
+      dockerfile_inline: |
+        FROM oven/bun:latest
+        WORKDIR /app
+        COPY ./main.ts ./
+        CMD ["bun", "run", "main.ts"]
