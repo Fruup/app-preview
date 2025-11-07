@@ -40,3 +40,5 @@ traefik/certs/
 traefik/letsencrypt/
 
 sources-private/
+
+app-preview.config.json
