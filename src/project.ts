@@ -294,6 +294,7 @@ export class Project {
       // Add labels
       service.labels ??= [];
       service.labels.push(`traefik.docker.network=${networkName}`);
+      service.labels.push(`traefik.port=80`); // TODO:
 
       // Add domain labels
       const exposeConfig = this.options.expose?.[name];
