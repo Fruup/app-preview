@@ -50,29 +50,21 @@ export class Project {
 
     await this._cleanup();
 
-    console.debug("cleanup done");
-
     if (this.options.source.type === "git") {
       await this._clone({
         repo: this.options.source.repo,
         branch: this.options.source.branch,
       });
-
-      console.debug("clone done");
     } else if (this.options.source.type === "local") {
       await this._copyLocal({ sourcePath: this.options.source.path });
     } else {
       throw new Error("Unknown project source type");
     }
 
-    console.debug("loading config");
-
     // Load the config
     try {
       const configFile = await this._findFile("**/app-preview.config.ts");
       if (!configFile) throw new Error("No app-preview.config.ts found");
-
-      console.debug("config file found at", configFile.filepath);
 
       const defineConfigSymbol = Symbol("defineConfig");
 
@@ -88,22 +80,9 @@ export class Project {
         return config;
       };
 
-      console.debug("importing...");
-
       // TODO: make more flexible
       const exports = await import(configFile.filepath);
-
-      console.debug("imported", exports.default);
-
-      const { resolve, reject, promise } = Promise.withResolvers();
-      exports.default.then(resolve).catch(reject);
-      const maybeConfig: any = await promise;
-
-      // await Bun.sleep(500);
-      // const maybeConfig = await exports.default;
-      // await Bun.sleep(500);
-
-      console.debug("maybeConfig", maybeConfig);
+      const maybeConfig = await exports.default;
 
       if (!maybeConfig || !maybeConfig[defineConfigSymbol]) {
         console.error("maybeConfig", maybeConfig);
