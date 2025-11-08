@@ -29,9 +29,9 @@ export async function exec(
     log.success(`Command succeeded: ${colors.dim(cmds.join(" "))}`);
   } else {
     log.error(
-      `Command failed with code ${proc.exitCode}: ${colors.dim(cmds.join(" "))}`
+      `Command failed with code ${proc.exitCode}: ${colors.dim(cmds.join(" "))}` +
+        (proc.stderr ? `\n\n${await proc.stderr.text()}` : "")
     );
-    if (proc.stderr) log.error(await proc.stderr.text());
   }
 
   // if (
