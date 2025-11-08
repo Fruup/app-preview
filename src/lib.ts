@@ -30,7 +30,8 @@ export async function exec(
   } else {
     log.error(
       `Command failed with code ${proc.exitCode}: ${colors.dim(cmds.join(" "))}` +
-        (proc.stderr ? `\n\n${await proc.stderr.text()}` : "")
+        (proc.stderr ? `\n\n${await proc.stderr.text()}` : ""),
+      { showLog: true }
     );
   }
 

@@ -1,8 +1,8 @@
 export default defineConfig(
-  ({ OnePasswordEnvGenerator, appNameDomainInfix }) => ({
+  async ({ OnePasswordEnvGenerator, appNameDomainInfix }) => ({
     root: "test",
     dockerComposePath: "docker-compose.yml",
-    envGenerator: OnePasswordEnvGenerator.create(
+    envGenerator: await OnePasswordEnvGenerator.create(
       "op://Work/n5lqo3s7ncutk4cnungs5nf27y/env"
     ),
     expose: {

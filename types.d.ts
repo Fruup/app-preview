@@ -15,7 +15,7 @@ declare global {
        */
       appNameDomainInfix: string;
       OnePasswordEnvGenerator: typeof OnePasswordEnvGenerator_;
-    }) => { [K in keyof ProjectConfig]: MaybePromise<ProjectConfig[K]> }
+    }) => MaybePromise<ProjectConfig>
   ): Promise<ProjectConfig>;
 }
 

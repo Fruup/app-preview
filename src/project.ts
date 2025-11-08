@@ -1,5 +1,4 @@
 import * as colors from "nanocolors";
-import { existsSync } from "fs";
 import * as prompts from "@clack/prompts";
 import { exec } from "./lib";
 import { dockerComposeSchema } from "./schemas/compose";
@@ -51,58 +50,70 @@ export class Project {
 
     await this._cleanup();
 
+    console.debug("cleanup done");
+
     if (this.options.source.type === "git") {
-      await this._cloneOrPull({
+      await this._clone({
         repo: this.options.source.repo,
         branch: this.options.source.branch,
       });
+
+      console.debug("clone done");
     } else if (this.options.source.type === "local") {
       await this._copyLocal({ sourcePath: this.options.source.path });
     } else {
       throw new Error("Unknown project source type");
     }
 
+    console.debug("loading config");
+
     // Load the config
     try {
       const configFile = await this._findFile("**/app-preview.config.ts");
       if (!configFile) throw new Error("No app-preview.config.ts found");
 
+      console.debug("config file found at", configFile.filepath);
+
       const defineConfigSymbol = Symbol("defineConfig");
 
       global.defineConfig = async (getter): Promise<ProjectConfig> => {
-        const result = getter({
+        const config: any = await getter({
           appName: this.options.appName,
           appNameDomainInfix: toDomainNamePart(this.options.appName),
           OnePasswordEnvGenerator,
         });
-
-        const config = Object.fromEntries(
-          await Promise.all(
-            Object.entries(result).map(async ([k, v]) => [k, await v])
-          )
-        );
 
         config[defineConfigSymbol] = true;
 
         return config;
       };
 
+      console.debug("importing...");
+
       // TODO: make more flexible
-      const config = await import(configFile.filepath).then(async (exports) => {
-        await Bun.sleep(100);
-        const maybeConfig = await exports.default;
-        await Bun.sleep(100);
+      const exports = await import(configFile.filepath);
 
-        if (!maybeConfig || !maybeConfig[defineConfigSymbol]) {
-          console.error("maybeConfig", maybeConfig);
+      console.debug("imported", exports.default);
 
-          throw new Error(
-            "app-preview.config.ts must export the result of `defineConfig` as default (`export default defineConfig(...)`)"
-          );
-        }
+      const { resolve, reject, promise } = Promise.withResolvers();
+      exports.default.then(resolve).catch(reject);
+      const maybeConfig: any = await promise;
 
-        return await (maybeConfig as ReturnType<typeof defineConfig>);
-      });
+      // await Bun.sleep(500);
+      // const maybeConfig = await exports.default;
+      // await Bun.sleep(500);
+
+      console.debug("maybeConfig", maybeConfig);
+
+      if (!maybeConfig || !maybeConfig[defineConfigSymbol]) {
+        console.error("maybeConfig", maybeConfig);
+
+        throw new Error(
+          "app-preview.config.ts must export the result of `defineConfig` as default (`export default defineConfig(...)`)"
+        );
+      }
+
+      const config = await (maybeConfig as ReturnType<typeof defineConfig>);
 
       // TODO: ugly
       this.#options = {
@@ -397,36 +408,25 @@ export class Project {
       noFailEarly: true,
     });
 
-    // Clean up temp directory
-    await exec(["rm", "-rf", this.paths.temp]);
+    // Remove files
+    await exec(["rm", "-rf", this.paths.projectDirectory]).catch(() => {});
+    // await exec(["rm", "-rf", this.paths.temp]);
   }
 
-  private async _cloneOrPull({
-    repo,
-    branch,
-  }: {
-    repo: string;
-    branch: string;
-  }) {
-    if (existsSync(path.join(this.paths.projectDirectory, ".git"))) {
-      await exec(["git", "pull", "origin", branch], {
-        cwd: this.paths.projectDirectory,
-      });
-    } else {
-      await exec(["mkdir", "-p", this.paths.projectDirectory]);
+  private async _clone({ repo, branch }: { repo: string; branch: string }) {
+    await exec(["mkdir", "-p", this.paths.projectDirectory]);
 
-      await exec([
-        "git",
-        "clone",
-        "--depth",
-        "1",
-        "--single-branch",
-        "--branch",
-        branch,
-        repo,
-        this.paths.projectDirectory,
-      ]);
-    }
+    await exec([
+      "git",
+      "clone",
+      "--depth",
+      "1",
+      "--single-branch",
+      "--branch",
+      branch,
+      repo,
+      this.paths.projectDirectory,
+    ]);
   }
 
   private async _copyLocal({ sourcePath }: { sourcePath: string }) {
@@ -444,9 +444,17 @@ export class Project {
         dot: true,
       })
       .next()
-      .then(({ value }) => value as string | undefined);
+      .then(({ value }) => value as string | undefined)
+      .catch((e) => {
+        if (e.code === "ENOENT") return undefined;
 
-    const file = Bun.file(filepath!);
+        console.error(e);
+        return undefined;
+      });
+
+    if (!filepath) return null;
+
+    const file = Bun.file(filepath);
     const exists = !!filepath && (await file.exists());
     if (!exists) return null;
 

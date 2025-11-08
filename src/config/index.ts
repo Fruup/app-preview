@@ -14,6 +14,7 @@ interface Config {
 const _empty: Config = {
   publicUrl: null,
   githubApp: null,
+  onePassword: null,
 };
 
 export async function loadConfig(): Promise<Config> {

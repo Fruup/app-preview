@@ -58,6 +58,7 @@ async function getWebhooks() {
     } = payload;
 
     const appName = `${toDomainNamePart(repository.name)}-pr-${number}`;
+
     const project = new Project({
       appName,
       source: {
@@ -67,17 +68,19 @@ async function getWebhooks() {
       },
     });
 
+    await project.initialize();
+
     switch (payload.action) {
       case "opened":
       case "synchronize":
       case "reopened":
       case "ready_for_review":
-        if (!draft) project.up();
+        if (!draft) await project.up();
         break;
 
       case "closed":
       case "converted_to_draft":
-        project.down();
+        await project.down();
         break;
     }
   });
