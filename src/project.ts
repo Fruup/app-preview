@@ -104,8 +104,7 @@ export class Project {
         if (
           typeof exports.default !== "object" ||
           !exports.default ||
-          // @ts-expect-error
-          !config[defineConfigSymbol]
+          !exports.default[defineConfigSymbol]
         ) {
           throw new Error(
             "app-preview.config.ts must export the result of `defineConfig` as default (`export default defineConfig(...)`)"
