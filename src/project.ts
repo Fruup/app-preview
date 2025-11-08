@@ -272,6 +272,8 @@ export class Project {
     };
 
     for (const [name, service] of Object.entries(composeConfig.services)) {
+      const routerName = `${this.options.appName}_${name}`;
+
       // Add env file
       service.env_file ??= [];
       if (typeof service.env_file === "string")
@@ -306,9 +308,11 @@ export class Project {
         // TODO: https
         service.labels.push(`traefik.enable=true`);
         service.labels.push(
-          `traefik.http.routers.${name}.rule=Host(\`${domain}\`)`
+          `traefik.http.routers.${routerName}.rule=Host(\`${domain}\`)`
         );
-        service.labels.push(`traefik.http.routers.${name}.entrypoints=web`);
+        service.labels.push(
+          `traefik.http.routers.${routerName}.entrypoints=web`
+        );
       }
 
       // Add basic auth labels
