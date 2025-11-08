@@ -16,7 +16,7 @@ export async function exec(
   } = {}
 ) {
   const cmds = cmds_.flatMap(mapCmd);
-  const proc = Bun.spawn(cmds, { ...options, stderr: "pipe" });
+  const proc = Bun.spawn(cmds, { ...options, stdout: "pipe", stderr: "pipe" });
 
   const log = prompts.taskLog({
     title: `Executing command: ${colors.dim(cmds.join(" "))}`,
