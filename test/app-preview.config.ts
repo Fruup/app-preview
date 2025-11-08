@@ -7,7 +7,6 @@ export default defineConfig(
     ),
     expose: {
       test: {
-        // domain: `${appNameDomainInfix}.traefik.me`,
         domain: `${appNameDomainInfix}.127-0-0-1.sslip.io`,
       },
     },
