@@ -54,7 +54,7 @@ async function getWebhooks() {
     const {
       repository,
       number,
-      pull_request: { head },
+      pull_request: { head, draft },
     } = payload;
 
     const appName = `${toDomainNamePart(repository.name)}-pr-${number}`;
@@ -72,7 +72,7 @@ async function getWebhooks() {
       case "synchronize":
       case "reopened":
       case "ready_for_review":
-        project.up();
+        if (!draft) project.up();
         break;
 
       case "closed":
