@@ -1,4 +1,5 @@
 import { existsSync } from "fs";
+import * as prompts from "@clack/prompts";
 import { exec } from "./lib";
 import { dockerComposeSchema } from "./schemas/compose";
 import path from "path";
@@ -271,6 +272,8 @@ export class Project {
       external: true,
     };
 
+    const domains: string[] = [];
+
     for (const [name, service] of Object.entries(composeConfig.services)) {
       const routerName = `${this.options.appName}_${name}`;
 
@@ -313,6 +316,8 @@ export class Project {
         service.labels.push(
           `traefik.http.routers.${routerName}.entrypoints=web`
         );
+
+        domains.push(domain);
       }
 
       // Add basic auth labels
@@ -377,7 +382,12 @@ export class Project {
     await Bun.write(envFilePath, envContent);
 
     // Start the stack
-    this.compose(["up", "--force-recreate", "--build", "-d", "--wait"]);
+    await this.compose(["up", "--force-recreate", "--build", "-d", "--wait"]);
+
+    prompts.note(
+      `Domains:\n` + domains.map((domain) => ` - ${domain}`).join("\n"),
+      `Project "${this.options.appName}" is up!\n\n`
+    );
   }
 
   async down() {
