@@ -385,7 +385,7 @@ export class Project {
     // Start the stack
     await this.compose(["up", "--force-recreate", "--build", "-d", "--wait"]);
 
-    prompts.note(
+    prompts.note
       `${colors.green("Domains")}:\n` +
         domains.map((domain) => ` - ${colors.underline(domain)}`).join("\n"),
       `Project "${this.options.appName}" is up!`
