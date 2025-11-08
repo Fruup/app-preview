@@ -1,4 +1,5 @@
 import * as prompts from "@clack/prompts";
+import * as colors from "nanocolors";
 import { Readable } from "stream";
 
 const failEarly = true;
@@ -15,19 +16,22 @@ export async function exec(
   } = {}
 ) {
   const cmds = cmds_.flatMap(mapCmd);
-  const proc = Bun.spawn(cmds, options);
+  const proc = Bun.spawn(cmds, { ...options, stderr: "pipe" });
+
   const log = prompts.taskLog({
-    title: `Executing command: ${cmds.join(" ")}`,
+    title: `Executing command: ${colors.dim(cmds.join(" "))}`,
     input: Readable.from(proc.stdout),
   });
 
   await proc.exited;
 
   if (proc.exitCode === 0) {
-    log.success(`Command succeeded: ${cmds.join(" ")}`);
+    log.success(`Command succeeded: ${colors.dim(cmds.join(" "))}`);
   } else {
-    log.error(`Command failed with code ${proc.exitCode}: ${cmds.join(" ")}`);
-    log.error(await proc.stderr.text());
+    log.error(
+      `Command failed with code ${proc.exitCode}: ${colors.dim(cmds.join(" "))}`
+    );
+    if (proc.stderr) log.error(await proc.stderr.text());
   }
 
   // if (
