@@ -13,6 +13,7 @@ export async function exec(
       stderr: string;
       preventFailEarly: () => void;
     }) => void;
+    expectedErrors?: string[];
   } = {}
 ) {
   const cmds = cmds_.flatMap(mapCmd);
@@ -28,9 +29,23 @@ export async function exec(
   if (proc.exitCode === 0) {
     log.success(`Command succeeded: ${colors.dim(cmds.join(" "))}`);
   } else {
+    const error = proc.stderr ? await proc.stderr.text() : undefined;
+
+    if (
+      error &&
+      options2.expectedErrors?.some((expected) => error.includes(expected))
+    ) {
+      log.success(
+        `Command failed with expected error: ${colors.dim(cmds.join(" "))}` +
+          (error ? `\n\n${error}` : "")
+      );
+
+      return proc;
+    }
+
     log.error(
       `Command failed with code ${proc.exitCode}: ${colors.dim(cmds.join(" "))}` +
-        (proc.stderr ? `\n\n${await proc.stderr.text()}` : ""),
+        (error ? `\n\n${error}` : ""),
       { showLog: true }
     );
   }

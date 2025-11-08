@@ -23,9 +23,10 @@ export const connectionRouter: FastifyPluginCallback = (fastify) => {
       },
       redirect_url: `${appUrl}/api/v1/github/connection/redirect`,
       public: false,
+      // see https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#permissions
       default_permissions: {
         contents: "read",
-        pull_requests: "read",
+        pull_requests: "write", // write to be able to create comments
       },
       default_events: ["pull_request"],
     };

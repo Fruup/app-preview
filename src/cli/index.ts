@@ -13,9 +13,12 @@ program
   .command("github")
   .command("setup")
   .description("Set up GitHub integration")
-  .action(configureGithubIntegration);
+  .action(() => configureGithubIntegration());
 
-program.command("setup").description("Set up App Preview").action(setup);
+program
+  .command("setup")
+  .description("Set up App Preview")
+  .action(() => setup());
 
 program
   .command("config")
@@ -44,6 +47,7 @@ program
     const repo_ = await prompts.text({
       message: "Git repository URL:",
       validate(value_) {
+        if (!value_) return "Repository URL cannot be empty";
         const value = transformUrl(value_);
 
         if (!URL.parse(value)) return "Please enter a valid URL";

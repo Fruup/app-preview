@@ -72,6 +72,10 @@ export class Project {
         const config: any = await getter({
           appName: this.options.appName,
           appNameDomainInfix: toDomainNamePart(this.options.appName),
+          // pullRequest: {
+          //   number,
+          //   branch,
+          // },
           OnePasswordEnvGenerator,
         });
 
@@ -222,30 +226,16 @@ export class Project {
     await exec(
       ["docker", "network", "create", networkName],
       {},
-      {
-        onError({ stderr, preventFailEarly }) {
-          if (
-            stderr.includes(`network with name ${networkName} already exists`)
-          ) {
-            preventFailEarly();
-          }
-        },
-      }
+      { expectedErrors: [`network with name ${networkName} already exists`] }
     );
 
     await exec(
       ["docker", "network", "connect", networkName, traefikContainerName],
       {},
       {
-        onError({ stderr, preventFailEarly }) {
-          if (
-            stderr.includes(
-              `endpoint with name ${traefikContainerName} already exists in network ${networkName}`
-            )
-          ) {
-            preventFailEarly();
-          }
-        },
+        expectedErrors: [
+          `endpoint with name ${traefikContainerName} already exists in network ${networkName}`,
+        ],
       }
     );
 
@@ -389,7 +379,6 @@ export class Project {
 
     // Remove files
     await exec(["rm", "-rf", this.paths.projectDirectory]).catch(() => {});
-    // await exec(["rm", "-rf", this.paths.temp]);
   }
 
   private async _clone({ repo, branch }: { repo: string; branch: string }) {

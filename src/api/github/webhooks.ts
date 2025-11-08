@@ -1,12 +1,10 @@
 import type { FastifyPluginCallback } from "fastify";
-import {
-  createNodeMiddleware,
-  createWebMiddleware,
-  Webhooks,
-} from "@octokit/webhooks";
+import { createNodeMiddleware, createWebMiddleware } from "@octokit/webhooks";
 import { loadConfig } from "../../config";
 import { Project } from "../../project";
 import { toDomainNamePart } from "../../utils";
+import { getGitHubApp } from "./app";
+import type { App } from "@octokit/app";
 
 export const webhooksRouter: FastifyPluginCallback = (fastify) => {
   fastify.post("/github/webhooks", async (request, response) => {
@@ -24,38 +22,33 @@ export const webhooksRouter: FastifyPluginCallback = (fastify) => {
   });
 };
 
-let _webhooks: Webhooks | undefined = undefined;
+let _webhooks: App["webhooks"] | undefined = undefined;
 let _middleware: ReturnType<typeof createNodeMiddleware> | undefined =
   undefined;
 
 async function getWebhooks() {
   if (_webhooks) return _webhooks;
 
-  console.log("Configuring GitHub webhooks...");
-
-  const config = await loadConfig();
-  const secret = config.githubApp?.webhookSecret;
-
-  if (!secret) {
-    console.error("No webhook secret configured");
+  const app = await getGitHubApp();
+  if (!app) {
+    console.error("No GitHub App configured");
     return;
   }
 
-  _webhooks = new Webhooks({
-    secret,
-    log: console,
-  });
+  _webhooks = app.webhooks;
 
   _webhooks.onError(async (error) => {
     console.error(`Error processing webhook event`, error);
   });
 
-  _webhooks.on("pull_request", async ({ payload }) => {
-    const {
-      repository,
-      number,
-      pull_request: { head, draft },
-    } = payload;
+  _webhooks.on("pull_request", async ({ payload, octokit }) => {
+    const { repository, number, pull_request } = payload;
+
+    const config = await loadConfig();
+    const repoConfig = config.repositories[repository.full_name];
+
+    if (!repoConfig?.enablePreview) return;
+    if (pull_request.base.ref !== repoConfig.targetBranch) return;
 
     const appName = `${toDomainNamePart(repository.name)}-pr-${number}`;
 
@@ -64,7 +57,7 @@ async function getWebhooks() {
       source: {
         type: "git",
         repo: repository.html_url,
-        branch: head.ref,
+        branch: pull_request.head.ref,
       },
     });
 
@@ -75,7 +68,23 @@ async function getWebhooks() {
       case "synchronize":
       case "reopened":
       case "ready_for_review":
-        if (!draft) await project.up();
+        if (!pull_request.draft) {
+          await project.up();
+
+          // TODO: comment
+
+          // await octokit.request(
+          //   "POST /repos/{owner}/{repo}/pulls/{pull_number}/comments",
+          //   {
+          //     owner: repository.owner.login,
+          //     repo: repository.name,
+          //     pull_number: number,
+          //     body: `Preview environment for this pull request is available :)`,
+          //     // commit_id: payload.pull_request.head.sha,
+          //     // path: "",
+          //   }
+          // );
+        }
         break;
 
       case "closed":

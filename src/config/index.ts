@@ -9,12 +9,21 @@ interface Config {
     webhookSecret: string | null;
   } | null;
   onePassword: { serviceToken: string } | null;
+  repositories: {
+    [fullName: string]:
+      | {
+          enablePreview: boolean;
+          targetBranch: string;
+        }
+      | undefined;
+  };
 }
 
 const _empty: Config = {
   publicUrl: null,
   githubApp: null,
   onePassword: null,
+  repositories: {},
 };
 
 export async function loadConfig(): Promise<Config> {
