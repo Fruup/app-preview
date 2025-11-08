@@ -1,3 +1,4 @@
+import * as colors from "nanocolors";
 import { existsSync } from "fs";
 import * as prompts from "@clack/prompts";
 import { exec } from "./lib";
@@ -384,16 +385,11 @@ export class Project {
     // Start the stack
     await this.compose(["up", "--force-recreate", "--build", "-d", "--wait"]);
 
-    prompts.log.success(
-      `Project "${this.options.appName}" is up!\n\n` +
-        `Domains:\n` +
-        domains.map((domain) => ` - ${domain}`).join("\n")
+    prompts.note(
+      `${colors.green("Domains")}:\n` +
+        domains.map((domain) => ` - ${colors.underline(domain)}`).join("\n"),
+      `Project "${this.options.appName}" is up!`
     );
-
-    // prompts.note(
-    //   `Domains:\n` + domains.map((domain) => ` - ${domain}`).join("\n"),
-    //   `Project "${this.options.appName}" is up!\n\n`
-    // );
   }
 
   async down() {
