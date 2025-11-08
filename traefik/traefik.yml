@@ -34,9 +34,10 @@ certificatesResolvers:
       httpChallenge:
         entryPoint: web
       caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+
 # Optional: Enable access logs
-# accessLog: {}
+accessLog: {}
 
 # Optional: Enable Traefik logs
-# log:
-#   level: INFO
+log:
+  level: INFO
