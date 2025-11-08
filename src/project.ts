@@ -65,7 +65,7 @@ export class Project {
       const configFilePath = await new Bun.Glob("**/app-preview.config.ts")
         .scan({
           cwd: this.paths.projectDirectory,
-          onlyFiles: true, //
+          onlyFiles: true,
         })
         .next()
         .then(({ value }) => {
