@@ -64,22 +64,8 @@ export class Project {
 
     // Load the config
     try {
-      const configFilePath = await new Bun.Glob("**/app-preview.config.ts")
-        .scan({
-          cwd: this.paths.projectDirectory,
-          onlyFiles: true,
-        })
-        .next()
-        .then(({ value }) => {
-          const relativePath: string | undefined = value;
-          return relativePath
-            ? path.join(this.paths.projectDirectory, relativePath)
-            : undefined;
-        });
-
-      if (!configFilePath || !(await Bun.file(configFilePath).exists())) {
-        throw new Error("No app-preview.config.ts found");
-      }
+      const configFile = await this._findFile("**/app-preview.config.ts");
+      if (!configFile) throw new Error("No app-preview.config.ts found");
 
       const defineConfigSymbol = Symbol("defineConfig");
 
@@ -102,7 +88,7 @@ export class Project {
       };
 
       // TODO: make more flexible
-      const config = await import(configFilePath).then(async (exports) => {
+      const config = await import(configFile.filepath).then(async (exports) => {
         await Bun.sleep(100);
         const maybeConfig = await exports.default;
         await Bun.sleep(100);
@@ -193,9 +179,14 @@ export class Project {
       noFailEarly?: boolean;
     } = {}
   ) {
-    const composeFile = path.join(this.paths.temp, "docker-compose.yml");
-    const composeFileExists = await Bun.file(composeFile).exists();
-    if (!composeFileExists) return;
+    const composeFile = await this._findFile(
+      "**/.app-preview/docker-compose.yml"
+    );
+
+    if (!composeFile) {
+      console.warn(`No docker-compose.yml found at ${composeFile}`);
+      return;
+    }
 
     const envFile = path.join(this.paths.temp, ".env");
     const envFileExists = await Bun.file(envFile).exists();
@@ -210,7 +201,7 @@ export class Project {
         "--project-directory",
         this.paths.root,
         "-f",
-        composeFile,
+        composeFile.filepath,
         ...cmds,
       ],
       {},
@@ -387,13 +378,17 @@ export class Project {
 
     prompts.note(
       `${colors.green("Domains")}:\n` +
-        domains.map((domain) => ` - ${colors.underline(domain)}`).join("\n"),
-      `Project "${this.options.appName}" is up!`
+        domains
+          .map((domain) => ` - ${colors.underline("http://" + domain)}`)
+          .join("\n"),
+      `Project "${this.options.appName}" is up 🚀`
     );
   }
 
   async down() {
-    return this._cleanup();
+    await this._cleanup();
+
+    prompts.note(`Project "${this.options.appName}" down`);
   }
 
   private async _cleanup() {
@@ -438,6 +433,24 @@ export class Project {
     await exec(["rm", "-rf", this.paths.projectDirectory]);
     await exec(["mkdir", "-p", this.paths.projectDirectory]);
     await exec(["cp", "-R", sourcePath + "/.", this.paths.projectDirectory]);
+  }
+
+  private async _findFile(pattern: string) {
+    const filepath = await new Bun.Glob(pattern)
+      .scan({
+        cwd: this.paths.projectDirectory,
+        onlyFiles: true,
+        absolute: true,
+        dot: true,
+      })
+      .next()
+      .then(({ value }) => value as string | undefined);
+
+    const file = Bun.file(filepath!);
+    const exists = !!filepath && (await file.exists());
+    if (!exists) return null;
+
+    return { file, filepath };
   }
 }
 
