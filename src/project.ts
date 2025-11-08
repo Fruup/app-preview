@@ -198,7 +198,7 @@ export class Project {
     const envFile = path.join(this.paths.temp, ".env");
     const envFileExists = await Bun.file(envFile).exists();
 
-    return exec(
+    return await exec(
       [
         "docker",
         "compose",
