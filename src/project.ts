@@ -79,6 +79,8 @@ export class Project {
         throw new Error("No app-preview.config.ts found");
       }
 
+      const defineConfigSymbol = Symbol("defineConfig");
+
       global.defineConfig = async (getter): Promise<ProjectConfig> => {
         const result = getter({
           appName: this.options.appName,
@@ -86,16 +88,40 @@ export class Project {
           OnePasswordEnvGenerator,
         });
 
-        return Object.fromEntries(
+        const config = Object.fromEntries(
           await Promise.all(
             Object.entries(result).map(async ([k, v]) => [k, await v])
           )
         );
+
+        config[defineConfigSymbol] = true;
+
+        return config;
       };
 
       // TODO: make more flexible
-      const { default: config }: { default: ReturnType<typeof defineConfig> } =
-        await import(configFilePath);
+      const config = await import(configFilePath).then(async (exports) => {
+        if (typeof exports.default !== "function") {
+          throw new Error(
+            "app-preview.config.ts must export the result of `defineConfig` as default (`export default defineConfig(...)`)"
+          );
+        }
+
+        const config = await (exports.default as ReturnType<
+          typeof defineConfig
+        >);
+
+        if (
+          // @ts-expect-error
+          !config[defineConfigSymbol]
+        ) {
+          throw new Error(
+            "app-preview.config.ts must export the result of `defineConfig` as default (`export default defineConfig(...)`)"
+          );
+        }
+
+        return config;
+      });
 
       console.log("LOADED CONFIG", config);
 
