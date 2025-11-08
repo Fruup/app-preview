@@ -150,6 +150,7 @@ const buildSchema = z.union([
   z.object({
     context: z.string().optional(),
     dockerfile: z.string().optional(),
+    dockerfile_inline: z.string().optional(),
     args: mapOrArray.optional(),
     cache_from: z.array(z.string()).optional(),
     labels: mapOrArray.optional(),
