@@ -97,6 +97,8 @@ export class Project {
       const { default: config }: { default: ReturnType<typeof defineConfig> } =
         await import(configFilePath);
 
+      console.log("LOADED CONFIG", config);
+
       // TODO: ugly
       this.#options = {
         ...this.#options,
