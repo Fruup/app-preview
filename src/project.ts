@@ -112,8 +112,6 @@ export class Project {
         return await (maybeConfig as ReturnType<typeof defineConfig>);
       });
 
-      console.log("LOADED CONFIG", config);
-
       // TODO: ugly
       this.#options = {
         ...this.#options,
