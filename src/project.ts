@@ -104,6 +104,8 @@ export class Project {
         const maybeConfig = await exports.default;
 
         if (!maybeConfig || !maybeConfig[defineConfigSymbol]) {
+          console.error("maybeConfig", maybeConfig);
+
           throw new Error(
             "app-preview.config.ts must export the result of `defineConfig` as default (`export default defineConfig(...)`)"
           );
