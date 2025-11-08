@@ -6,3 +6,5 @@ services:
         WORKDIR /app
         COPY ./main.ts ./
         CMD ["bun", "run", "main.ts"]
+    expose:
+      - 80
