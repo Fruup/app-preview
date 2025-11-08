@@ -101,15 +101,15 @@ export class Project {
 
       // TODO: make more flexible
       const config = await import(configFilePath).then(async (exports) => {
-        exports = await exports;
+        const maybeConfig = await exports.default;
 
-        if (!exports.default || !exports.default[defineConfigSymbol]) {
+        if (!maybeConfig || !maybeConfig[defineConfigSymbol]) {
           throw new Error(
             "app-preview.config.ts must export the result of `defineConfig` as default (`export default defineConfig(...)`)"
           );
         }
 
-        return await (exports.default as ReturnType<typeof defineConfig>);
+        return await (maybeConfig as ReturnType<typeof defineConfig>);
       });
 
       console.log("LOADED CONFIG", config);
