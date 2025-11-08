@@ -101,7 +101,9 @@ export class Project {
 
       // TODO: make more flexible
       const config = await import(configFilePath).then(async (exports) => {
+        await Bun.sleep(100);
         const maybeConfig = await exports.default;
+        await Bun.sleep(100);
 
         if (!maybeConfig || !maybeConfig[defineConfigSymbol]) {
           console.error("maybeConfig", maybeConfig);
