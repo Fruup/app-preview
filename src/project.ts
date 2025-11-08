@@ -101,7 +101,7 @@ export class Project {
 
       // TODO: make more flexible
       const config = await import(configFilePath).then(async (exports) => {
-        console.log("exports.default", exports.default);
+        exports = await exports;
 
         if (!exports.default || !exports.default[defineConfigSymbol]) {
           throw new Error(
