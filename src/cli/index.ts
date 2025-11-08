@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { Project } from "../project";
 import * as prompts from "@clack/prompts";
 import * as colors from "nanocolors";
-import { configureGithubIntegration } from "../setup";
+import { configureGithubIntegration, setup } from "../setup";
 
 const program = new Command();
 
@@ -14,6 +14,8 @@ program
   .command("setup")
   .description("Set up GitHub integration")
   .action(configureGithubIntegration);
+
+program.command("setup").description("Set up App Preview").action(setup);
 
 program
   .command("config")

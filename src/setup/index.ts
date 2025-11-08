@@ -1,5 +1,5 @@
 import { getPublicIp } from "../utils";
-import { loadConfig } from "../config";
+import { loadConfig, updateConfig } from "../config";
 import * as prompts from "@clack/prompts";
 import * as colors from "nanocolors";
 import { App } from "@octokit/app";
@@ -14,6 +14,8 @@ export async function setup() {
       message: "Public URL for your app (leave empty to use public IP):",
       initialValue: config.publicUrl || "",
       validate(value) {
+        value ??= "";
+
         if (!URL.parse(value)) {
           return "Please enter a valid URL";
         }
@@ -21,10 +23,7 @@ export async function setup() {
     });
 
     if (prompts.isCancel(answer)) process.exit(1);
-
-    if (answer.length > 0) {
-      config.publicUrl = answer;
-    }
+    if (answer) config.publicUrl = answer;
   }
 
   if (config.githubApp) {
@@ -38,6 +37,21 @@ export async function setup() {
     if (answer) await configureGithubIntegration();
   } else {
     await configureGithubIntegration();
+  }
+
+  {
+    const answer = config.onePassword
+      ? await prompts.confirm({
+          message:
+            "1Password integration is already configured. Do you want to reconfigure it?",
+          initialValue: false,
+        })
+      : await prompts.confirm({
+          message: "Do you want to set up the 1Password integration now?",
+        });
+
+    if (prompts.isCancel(answer)) process.exit(1);
+    if (answer) await configureOnePasswordIntegration();
   }
 
   prompts.outro("All done! Setup complete.");
@@ -89,4 +103,27 @@ export async function checkGithubIntegration() {
   } else {
     prompts.log.error("Failed to verify GitHub App configuration.");
   }
+}
+
+export async function configureOnePasswordIntegration() {
+  prompts.log.message(
+    `You'll need to specify a service account token.\n` +
+      `Please visit ${colors.dim(colors.underline("https://developer.1password.com/docs/service-accounts/get-started#create-a-service-account"))} for information on how to create a 1Password service account.`
+  );
+
+  const tokenAnswer = await prompts.password({
+    message: "Enter your 1Password service account token here:",
+    validate(value) {
+      if (!value) return "Token cannot be empty";
+      if (!value.startsWith("ops_")) return "Invalid 1Password token format";
+    },
+  });
+
+  if (prompts.isCancel(tokenAnswer)) process.exit(1);
+
+  await updateConfig({
+    onePassword: {
+      serviceToken: tokenAnswer,
+    },
+  });
 }
