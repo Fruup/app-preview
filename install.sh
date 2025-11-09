@@ -34,7 +34,6 @@ fi
 if docker compose version &> /dev/null
 then
 	echo "Docker Compose is already installed."
-	exit 0
 else
 	export DOCKER_CONFIG=$HOME/.docker
 	DOCKER_COMPOSE_VERSION="2.40.2"
