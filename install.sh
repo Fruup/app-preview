@@ -47,6 +47,12 @@ docker compose version
 git clone https://github.com/Fruup/app-preview.git ./app-preview
 cd ./app-preview
 
+# Manage Docker permissions
+# TODO: Unsafe
+sudo groupadd docker
+sudo usermod -aG docker $USER
+newgrp docker
+
 # Start traefik
 docker compose --project-directory ./traefik up --build -d --wait
 
