@@ -44,12 +44,12 @@ docker --version
 docker compose version
 
 # Clone repository
-git clone https://github.com/Fruup/app-preview.git ./app-preview
+git clone https://github.com/Fruup/app-preview.git --depth=1 ./app-preview
 cd ./app-preview
 
 # Manage Docker permissions
 # TODO: Unsafe
-sudo groupadd docker
+# sudo groupadd docker
 sudo usermod -aG docker $USER
 newgrp docker
 
