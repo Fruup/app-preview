@@ -38,9 +38,14 @@ echo 'export PATH="$HOME/.docker/cli-plugins:$PATH"' >> ~/.bashrc
 # Verify installations
 echo "Verifying installations..."
 
+git --version
 bun --version
 docker --version
 docker compose version
+
+# Clone repository
+git clone https://github.com/Fruup/app-preview.git /app-preview
+cd /app-preview
 
 # Start traefik
 docker compose -f ./traefik up --build -d --wait
