@@ -1,5 +1,5 @@
 import { getPublicIp } from "../utils";
-import { loadConfig, updateConfig } from "../config";
+import { loadConfig, storeConfig, updateConfig } from "../config";
 import * as prompts from "@clack/prompts";
 import * as colors from "nanocolors";
 import { App } from "@octokit/app";
@@ -24,7 +24,10 @@ export async function setup() {
     });
 
     if (prompts.isCancel(answer)) process.exit(1);
-    if (answer) config.publicUrl = answer;
+    if (answer) {
+      config.publicUrl = answer;
+      await storeConfig(config);
+    }
   }
 
   // Start API container

@@ -9,11 +9,13 @@ services:
       bun run ./src/api
     networks:
       - app-preview-traefik_default
+    expose:
+      - 3000
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app-preview-api.rule=Host(`${API_HOST}`)"
+      - "traefik.http.routers.app-preview-api.rule=Host(`${API_HOST}`) && PathPrefix(`/api`)"
       - "traefik.http.routers.app-preview-api.entrypoints=web"
-      - "traefik.http.services.app-preview-api.loadbalancer.server.port=3000"
+      # - "traefik.http.services.app-preview-api.loadbalancer.server.port=3000"
 
 networks:
   app-preview-traefik_default:
