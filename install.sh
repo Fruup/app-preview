@@ -3,7 +3,7 @@
 set -e
 
 sudo apt-get update
-sudo apt-get install -y curl unzip gh
+sudo apt-get install -y curl git unzip
 
 # Install bun
 if ! command -v bun &> /dev/null
@@ -45,5 +45,8 @@ docker compose version
 # Start traefik
 docker compose -f ./traefik up --build -d --wait
 
-echo "🚀 Successfully installed"
-echo "Please restart your shell or run: source ~/.bashrc"
+echo "🚀 Dependencies installed successfully!"
+echo "Let's move on to the setup. It won't take long!"
+# echo "Please restart your shell or run: source ~/.bashrc"
+
+bun run ./src/setup/main.ts
