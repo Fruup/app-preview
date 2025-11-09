@@ -3,6 +3,7 @@ import { loadConfig, updateConfig } from "../config";
 import * as prompts from "@clack/prompts";
 import * as colors from "nanocolors";
 import { App } from "@octokit/app";
+import { exec } from "../lib";
 
 export async function setup() {
   prompts.intro("Setting up App Preview");
@@ -24,6 +25,29 @@ export async function setup() {
 
     if (prompts.isCancel(answer)) process.exit(1);
     if (answer) config.publicUrl = answer;
+  }
+
+  // Start API container
+  {
+    const publicUrl = config.publicUrl || `http://${await getPublicIp()}`;
+
+    await exec(
+      [
+        "docker",
+        "compose",
+        "-f",
+        "docker-compose.yml",
+        "up",
+        "api",
+        "-d",
+        "--wait",
+      ],
+      {
+        env: {
+          API_HOST: `${URL.parse(publicUrl)!.hostname}`,
+        },
+      }
+    );
   }
 
   if (config.githubApp) {
