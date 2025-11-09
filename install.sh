@@ -48,7 +48,7 @@ git clone https://github.com/Fruup/app-preview.git ./app-preview
 cd ./app-preview
 
 # Start traefik
-docker compose -f ./traefik up --build -d --wait
+docker compose --project-directory ./traefik up --build -d --wait
 
 echo "🚀 Dependencies installed successfully!"
 echo "Let's move on to the setup. It won't take long!"
