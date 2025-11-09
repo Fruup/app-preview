@@ -31,15 +31,21 @@ else
 fi
 
 # Install Docker Compose
-export DOCKER_CONFIG=$HOME/.docker
-DOCKER_COMPOSE_VERSION="2.40.2"
+if docker compose version &> /dev/null
+then
+	echo "Docker Compose is already installed."
+	exit 0
+else
+	export DOCKER_CONFIG=$HOME/.docker
+	DOCKER_COMPOSE_VERSION="2.40.2"
 
-echo "Installing Docker Compose..."
-mkdir -p $DOCKER_CONFIG/cli-plugins
-curl -L "https://github.com/docker/compose/releases/download/v$DOCKER_COMPOSE_VERSION/docker-compose-$(uname -s)-$(uname -m)" -o $DOCKER_CONFIG/cli-plugins/docker-compose
-chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
-export PATH="$DOCKER_CONFIG/cli-plugins:$PATH"
-echo 'export PATH="$HOME/.docker/cli-plugins:$PATH"' >> ~/.bashrc
+	echo "Installing Docker Compose..."
+	mkdir -p $DOCKER_CONFIG/cli-plugins
+	curl -L "https://github.com/docker/compose/releases/download/v$DOCKER_COMPOSE_VERSION/docker-compose-$(uname -s)-$(uname -m)" -o $DOCKER_CONFIG/cli-plugins/docker-compose
+	chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
+	export PATH="$DOCKER_CONFIG/cli-plugins:$PATH"
+	echo 'export PATH="$HOME/.docker/cli-plugins:$PATH"' >> ~/.bashrc
+fi
 
 # Verify installations
 echo ""
@@ -98,17 +104,17 @@ fi
 echo ""
 echo "==> All dependencies installed successfully!"
 
-# Clone repository
-echo ""
-echo "==> Cloning repository..."
-git clone https://github.com/Fruup/app-preview.git --depth=1 ./app-preview
-cd ./app-preview
-
 # Set up Docker permissions
 echo ""
 echo "==> Setting up Docker permissions..."
 echo "Adding user to docker group (requires sudo)..."
 sudo usermod -aG docker $USER
+
+# Clone repository
+echo ""
+echo "==> Cloning repository..."
+git clone https://github.com/Fruup/app-preview.git --depth=1 ./app-preview
+cd ./app-preview
 
 # Start traefik (using sudo since group membership isn't active yet)
 echo ""
@@ -123,6 +129,7 @@ echo "Let's move on to the setup. It won't take long!"
 # Run setup script
 echo ""
 echo "==> Running setup..."
+bun install
 bun run ./src/setup/main.ts
 
 echo ""
