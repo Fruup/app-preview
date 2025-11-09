@@ -12,12 +12,13 @@ export const webhooksRouter: FastifyPluginCallback = (fastify) => {
     if (!webhooks) return response.status(500).send("Webhooks not configured");
     if (!_middleware)
       return response.status(500).send("Middleware not configured");
+    if (!request.rawBody) return response.status(400).send("No raw body found");
 
     await webhooks.verifyAndReceive({
       id: request.headers["x-github-hook-id"] as string,
       name: request.headers["x-github-event"] as string,
       signature: request.headers["x-hub-signature-256"] as string,
-      payload: JSON.stringify(request.body),
+      payload: request.rawBody.toString("utf-8"),
     });
   });
 };

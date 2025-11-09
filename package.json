@@ -18,6 +18,7 @@
     "@octokit/app": "^16.1.2",
     "commander": "^14.0.2",
     "fastify": "^5.6.1",
+    "fastify-raw-body": "^5.0.0",
     "nanocolors": "^0.2.13",
     "nanoid": "^5.1.6",
     "open": "^10.2.0",

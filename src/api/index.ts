@@ -4,7 +4,13 @@ import { connectionRouter } from "./github/connection";
 
 const app = fastify();
 
-const v1: FastifyPluginCallback = (fastify) => {
+const v1: FastifyPluginCallback = async (fastify) => {
+  await app.register(import("fastify-raw-body"), {
+    field: "rawBody", // change the default request.rawBody property name
+    global: true, // add the rawBody to every request. **Default true**
+    encoding: "utf8", // set it to false to set rawBody as a Buffer **Default utf8**
+  });
+
   fastify.register(connectionRouter);
   fastify.register(webhooksRouter);
 };
