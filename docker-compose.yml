@@ -4,6 +4,7 @@ services:
     image: oven/bun
     volumes:
       - "${PWD}:/app-preview:Z"
+    working_dir: /app-preview
     command: >
       bun run ./src/api
     networks:
