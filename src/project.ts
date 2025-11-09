@@ -346,11 +346,31 @@ export class Project {
       else console.warn(`No .env file found at ${envFilePath}`);
     }
 
+    const commitSha = await exec(["git", "rev-parse", "HEAD"]).then((proc) =>
+      proc.exitCode === 0 ? proc.stdout.toString().trim() : null
+    );
+
+    function buildEnvString(envs: {
+      [key: string]: string | undefined | null | false;
+    }): string {
+      return Object.entries(envs)
+        .filter(
+          (e): e is [string, string] =>
+            e[1] !== undefined && e[1] !== null && e[1] !== false
+        )
+        .map(([key, value]) => `${key}=${value.replaceAll('"', '\\"')}`)
+        .join("\n");
+    }
+
     const envContent =
       `# ---------- ADDED ----------\n\n` +
-      `APP_NAME="${this.options.appName.replaceAll('"', '\\"')}"\n` +
-      `APP_NAME_DOMAIN_INFIX="${toDomainNamePart(this.options.appName)}"\n` +
-      `\n` +
+      buildEnvString({
+        APP_NAME: this.options.appName,
+        APP_NAME_DOMAIN_INFIX: toDomainNamePart(this.options.appName),
+        COMMIT_SHA: commitSha,
+        // PR_NUMBER
+      }) +
+      "\n\n" +
       `# ---------- ORIGINAL ----------\n\n` +
       existingEnvContent;
 
