@@ -93,11 +93,9 @@ export class Project {
       };
 
       // We have to sleep for some reason. Otherwise, `maybeConfig` will be undefined.
-      await Bun.sleep(100);
       const exports = await import(configFile.filepath);
-      await Bun.sleep(100);
       const maybeConfig = await exports.default;
-      await Bun.sleep(100);
+      await Bun.sleep(500);
 
       if (!maybeConfig || !maybeConfig[defineConfigSymbol]) {
         console.error("maybeConfig", maybeConfig);
