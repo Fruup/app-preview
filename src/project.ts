@@ -74,8 +74,6 @@ export class Project {
       const configFile = await this._findFile("**/app-preview.config.ts");
       if (!configFile) throw new Error("No app-preview.config.ts found");
 
-      const defineConfigSymbol = Symbol("defineConfig");
-
       global.defineConfig = async (getter): Promise<ProjectConfig> => {
         const config: any = await getter({
           appName: this.options.appName,
@@ -87,7 +85,7 @@ export class Project {
           OnePasswordEnvGenerator,
         });
 
-        config[defineConfigSymbol] = true;
+        config._defineConfigSymbol = true;
 
         return config;
       };
@@ -95,9 +93,8 @@ export class Project {
       // We have to sleep for some reason. Otherwise, `maybeConfig` will be undefined.
       const exports = await import(configFile.filepath);
       const maybeConfig = await exports.default;
-      await Bun.sleep(500);
 
-      if (!maybeConfig || !maybeConfig[defineConfigSymbol]) {
+      if (!maybeConfig || !maybeConfig._defineConfigSymbol) {
         console.error("maybeConfig", maybeConfig);
 
         throw new Error(
