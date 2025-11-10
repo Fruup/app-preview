@@ -7,6 +7,11 @@ interface Config {
     clientId: string;
     clientSecret: string;
     webhookSecret: string | null;
+    installationId: number;
+    token: {
+      token: string;
+      expiresAt: string;
+    } | null;
   } | null;
   onePassword: { serviceToken: string } | null;
   repositories: {

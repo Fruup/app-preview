@@ -1,3 +1,4 @@
+import simpleGit, { type CloneOptions } from "simple-git";
 import * as colors from "nanocolors";
 import * as prompts from "@clack/prompts";
 import { exec } from "./lib";
@@ -6,7 +7,9 @@ import path from "path";
 import type { EnvGenerator } from "../src/env";
 import { OnePasswordEnvGenerator } from "../src/env";
 import type { ContainerStatus } from "./types";
-import { toDomainNamePart } from "./utils";
+import { buildEnvString, getGithubToken, toDomainNamePart } from "./utils";
+
+const git = simpleGit();
 
 export interface ProjectOptions {
   appName: string;
@@ -52,7 +55,7 @@ export class Project {
 
     if (this.options.source.type === "git") {
       await this._clone({
-        repo: this.options.source.repo,
+        repoUrl: this.options.source.repoUrl,
         branch: this.options.source.branch,
       });
     } else if (this.options.source.type === "local") {
@@ -346,21 +349,13 @@ export class Project {
       else console.warn(`No .env file found at ${envFilePath}`);
     }
 
-    const commitSha = await exec(["git", "rev-parse", "HEAD"]).then((proc) =>
-      proc.exitCode === 0 ? proc.stdout.toString().trim() : null
-    );
-
-    function buildEnvString(envs: {
-      [key: string]: string | undefined | null | false;
-    }): string {
-      return Object.entries(envs)
-        .filter(
-          (e): e is [string, string] =>
-            e[1] !== undefined && e[1] !== null && e[1] !== false
-        )
-        .map(([key, value]) => `${key}=${value.replaceAll('"', '\\"')}`)
-        .join("\n");
-    }
+    const commitSha = await git
+      .revparse(["HEAD"])
+      .then((result) => result.trim())
+      .catch((error) => {
+        console.error("Error getting commit SHA:", error);
+        return null;
+      });
 
     const envContent =
       `# ---------- ADDED ----------\n\n` +
@@ -404,20 +399,29 @@ export class Project {
     await exec(["rm", "-rf", this.paths.projectDirectory]).catch(() => {});
   }
 
-  private async _clone({ repo, branch }: { repo: string; branch: string }) {
+  private async _clone({
+    repoUrl,
+    branch,
+  }: {
+    repoUrl: string;
+    branch: string;
+  }) {
     await exec(["mkdir", "-p", this.paths.projectDirectory]);
 
-    await exec([
-      "git",
-      "clone",
-      "--depth",
-      "1",
-      "--single-branch",
-      "--branch",
-      branch,
-      repo,
+    const token = await getGithubToken();
+    if (!token) throw new Error("Failed to get GitHub token");
+
+    repoUrl = repoUrl.replace("https://", "").replace("http://", "");
+
+    await git.clone(
+      `https://x-access-token:${token}@${repoUrl}`,
       this.paths.projectDirectory,
-    ]);
+      {
+        "--depth": 1,
+        "--single-branch": null,
+        "--branch": branch,
+      } satisfies CloneOptions
+    );
   }
 
   private async _copyLocal({ sourcePath }: { sourcePath: string }) {
@@ -464,7 +468,7 @@ const PATHS = {
 export type ProjectSource =
   | {
       type: "git";
-      repo: string;
+      repoUrl: string;
       branch: string;
     }
   | {

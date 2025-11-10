@@ -57,7 +57,7 @@ async function getWebhooks() {
       appName,
       source: {
         type: "git",
-        repo: repository.html_url,
+        repoUrl: repository.html_url,
         branch: pull_request.head.ref,
       },
     });
@@ -72,7 +72,7 @@ async function getWebhooks() {
         if (!pull_request.draft) {
           await project.up();
 
-          // TODO: comment
+          // TODO: comment - needs permission
 
           // await octokit.request(
           //   "POST /repos/{owner}/{repo}/pulls/{pull_number}/comments",

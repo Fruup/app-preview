@@ -83,6 +83,7 @@ export const connectionRouter: FastifyPluginCallback = (fastify) => {
         clientId: data.client_id,
         clientSecret: data.client_secret,
         webhookSecret: data.webhook_secret,
+        installationId: null as any, // to be filled after installation
       },
     });
 

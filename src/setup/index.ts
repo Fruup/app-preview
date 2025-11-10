@@ -43,11 +43,13 @@ export async function setup() {
         "up",
         "api",
         "-d",
+        "--force-recreate",
         "--wait",
       ],
       {
         env: {
           API_HOST: `${URL.parse(publicUrl)!.hostname}`,
+          ...Bun.env,
         },
       }
     );
@@ -85,7 +87,7 @@ export async function setup() {
 }
 
 export async function configureGithubIntegration() {
-  const config = await loadConfig();
+  let config = await loadConfig();
   const appUrl = config.publicUrl ?? `http://${await getPublicIp()}`;
   const url = `${appUrl}/api/v1/github/connection/start`;
 
@@ -103,33 +105,56 @@ export async function configureGithubIntegration() {
   } catch {}
 
   const answer = await prompts.confirm({
-    message: "Do you want to check the GitHub integration now?",
+    message: "Have you set up the GitHub App and completed the setup process?",
   });
 
   if (prompts.isCancel(answer)) process.exit(1);
-  if (answer) await checkGithubIntegration();
-}
+  if (!answer) return configureGithubIntegration();
 
-export async function checkGithubIntegration() {
-  const config = await loadConfig();
+  // Reload config
+  config = await loadConfig();
 
   if (!config.githubApp) {
     prompts.log.error(
       "GitHub App is not configured yet. Please complete the setup process."
     );
-    return;
+    return configureGithubIntegration();
   }
 
-  const { status } = await new App({
+  const app = new App({
     appId: config.githubApp.id,
     privateKey: config.githubApp.pem,
-  }).octokit.request("GET /app");
+  });
 
-  if (status === 200) {
-    prompts.log.success("GitHub App is configured correctly!");
-  } else {
+  const { data, status } = await app.octokit.request("GET /app");
+
+  if (status !== 200 || !data) {
     prompts.log.error("Failed to verify GitHub App configuration.");
+    return configureGithubIntegration();
   }
+
+  if (data.installations_count !== 1) {
+    prompts.log.error(
+      `GitHub App must be installed on exactly one account. Currently installed on ${data.installations_count} accounts.`
+    );
+    return configureGithubIntegration();
+  }
+
+  let installationId: number | null = null;
+  await app.eachInstallation(
+    ({ installation }) => (installationId = installation.id)
+  );
+
+  if (!installationId) {
+    prompts.log.error("Failed to retrieve GitHub App installation ID.");
+    return configureGithubIntegration();
+  }
+
+  // Update config with installation ID
+  config.githubApp.installationId = installationId;
+  await storeConfig(config);
+
+  prompts.log.success("GitHub App is configured correctly!");
 }
 
 export async function configureOnePasswordIntegration() {
