@@ -4,9 +4,11 @@ services:
     build:
       dockerfile_inline: |
         FROM oven/bun
-        RUN apt-get update && apt-get install -y git
+        RUN apt-get update && apt-get install -y git docker.io
     volumes:
       - "${PWD}:/app-preview:Z"
+      # docker socket
+      - "/var/run/docker.sock:/var/run/docker.sock:Z"
     working_dir: /app-preview
     command: >
       bun run ./src/api
