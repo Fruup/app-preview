@@ -14,9 +14,10 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.app-preview-api.rule=Host(`${API_HOST}`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.app-preview-api.entrypoints=web,web-secure"
-      - "traefik.http.middlewares.app-preview-api_https.redirectscheme.scheme=https"
-      - "traefik.http.routers.app-preview-api.middlewares=app-preview-api_https"
+      - "traefik.http.routers.app-preview-api.entrypoints=web"
+      # - "traefik.http.routers.app-preview-api.entrypoints=web,web-secure"
+      # - "traefik.http.middlewares.app-preview-api_https.redirectscheme.scheme=https"
+      # - "traefik.http.routers.app-preview-api.middlewares=app-preview-api_https"
 
 networks:
   app-preview-traefik_default:
