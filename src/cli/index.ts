@@ -11,6 +11,7 @@ program.name("app-preview").description("CLI for App Preview").version("0.0.1");
 program
   .name("app-preview")
   .command("github")
+  .description("Manage GitHub integration")
   .command("setup")
   .description("Set up GitHub integration")
   .action(() => configureGithubIntegration());
@@ -22,6 +23,7 @@ program
 
 program
   .command("config")
+  .description("Manage App Preview's configuration")
   .command("edit")
   .description("Edit the app-preview.config.json file")
   .action(async () => {
@@ -29,7 +31,7 @@ program
       await Bun.write("./app-preview.config.json", "{}");
 
     prompts.log.message(
-      `Open ${colors.bold("app-preview.config.json")} in your editor.`
+      `If it does not work automatically, open ${colors.bold("app-preview.config.json")} in your editor.`
     );
 
     Bun.openInEditor("./app-preview.config.json");
@@ -40,7 +42,8 @@ program
   .description("Create a new app preview project")
   .action(async () => {
     const transformUrl = (input: string) => {
-      if (!input.startsWith("http")) return `https://${input}`;
+      if (!input.startsWith("github.com")) input = `github.com/${input}`;
+      if (!input.startsWith("http")) input = `https://${input}`;
       return input;
     };
 
@@ -54,7 +57,7 @@ program
       },
     });
     if (prompts.isCancel(repo_)) return;
-    const repo = transformUrl(repo_);
+    const repoUrl = transformUrl(repo_);
 
     const branch = await prompts.text({
       message: "Git branch:",
@@ -64,8 +67,8 @@ program
     });
     if (prompts.isCancel(branch)) return;
 
-    const defaultAppName = repo
-      .slice(repo.lastIndexOf("/") + 1)
+    const defaultAppName = repoUrl
+      .slice(repoUrl.lastIndexOf("/") + 1)
       .replace(/[^a-zA-Z0-9]+/g, "-");
 
     const appName = await prompts.text({
@@ -82,7 +85,7 @@ program
       appName,
       source: {
         type: "git",
-        repo,
+        repoUrl,
         branch,
       },
     });

@@ -63,3 +63,20 @@ export function buildEnvString(
     .map(([key, value]) => `${key}=${value.replaceAll('"', '\\"')}`)
     .join("\n");
 }
+
+export const tryCatch = async <T, TError = any>(
+  fn: () => Promise<T>
+): Promise<
+  | {
+      data: T;
+      error: null;
+    }
+  | {
+      data: null;
+      error: TError;
+    }
+> => {
+  return fn()
+    .then((data) => ({ data, error: null }))
+    .catch((error) => ({ data: null, error: error as TError }));
+};

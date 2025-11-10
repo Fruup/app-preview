@@ -7,7 +7,12 @@ import path from "path";
 import type { EnvGenerator } from "../src/env";
 import { OnePasswordEnvGenerator } from "../src/env";
 import type { ContainerStatus } from "./types";
-import { buildEnvString, getGithubToken, toDomainNamePart } from "./utils";
+import {
+  buildEnvString,
+  getGithubToken,
+  toDomainNamePart,
+  tryCatch,
+} from "./utils";
 
 const git = simpleGit();
 
@@ -406,22 +411,30 @@ export class Project {
     repoUrl: string;
     branch: string;
   }) {
-    await exec(["mkdir", "-p", this.paths.projectDirectory]);
+    const spinner = prompts.spinner();
+    spinner.start(`Cloning repository ${colors.dim(repoUrl)}...`);
 
-    const token = await getGithubToken();
-    if (!token) throw new Error("Failed to get GitHub token");
+    const { error } = await tryCatch(async () => {
+      await exec(["mkdir", "-p", this.paths.projectDirectory]);
 
-    repoUrl = repoUrl.replace("https://", "").replace("http://", "");
+      const token = await getGithubToken();
+      if (!token) throw new Error("Failed to get GitHub token");
 
-    await git.clone(
-      `https://x-access-token:${token}@${repoUrl}`,
-      this.paths.projectDirectory,
-      {
-        "--depth": 1,
-        "--single-branch": null,
-        "--branch": branch,
-      } satisfies CloneOptions
-    );
+      repoUrl = repoUrl.replace("https://", "").replace("http://", "");
+
+      await git.clone(
+        `https://x-access-token:${token}@${repoUrl}`,
+        this.paths.projectDirectory,
+        {
+          "--depth": 1,
+          "--single-branch": null,
+          "--branch": branch,
+        } satisfies CloneOptions
+      );
+    });
+
+    if (error) spinner.stop(error?.toString(), 1);
+    else spinner.stop(`Repository ${colors.dim(repoUrl)} cloned.`);
   }
 
   private async _copyLocal({ sourcePath }: { sourcePath: string }) {
