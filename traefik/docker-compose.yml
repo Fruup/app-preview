@@ -14,3 +14,8 @@ services:
       - ./certs:/certs:Z
       - ./letsencrypt:/letsencrypt:Z
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.traefik.me`)"
+      - "traefik.http.routers.traefik.entrypoints=web"
+      - "traefik.http.routers.traefik.service=api@internal"

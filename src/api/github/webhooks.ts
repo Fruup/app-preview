@@ -42,7 +42,7 @@ async function getWebhooks() {
     console.error(`Error processing webhook event`, error);
   });
 
-  _webhooks.on("pull_request", async ({ payload, octokit }) => {
+  _webhooks.on("pull_request", async ({ payload }) => {
     const { repository, number, pull_request } = payload;
 
     const config = await loadConfig();
