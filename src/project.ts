@@ -14,8 +14,6 @@ import {
   tryCatch,
 } from "./utils";
 
-const git = simpleGit();
-
 export interface ProjectOptions {
   appName: string;
   source: ProjectSource;
@@ -44,6 +42,7 @@ export interface ProjectConfig {
 export class Project {
   #isInitialized = false;
   #options: ProjectOptions & ProjectConfig;
+  #git = simpleGit();
 
   constructor(options: ProjectOptions & ProjectConfig) {
     this.#options = options;
@@ -90,7 +89,6 @@ export class Project {
         return config;
       };
 
-      // We have to sleep for some reason. Otherwise, `maybeConfig` will be undefined.
       const exports = await import(configFile.filepath);
       const maybeConfig = await exports.default;
 
@@ -349,7 +347,7 @@ export class Project {
       else console.warn(`No .env file found at ${envFilePath}`);
     }
 
-    const commitSha = await git
+    const commitSha = await this.#git
       .revparse(["HEAD"])
       .then((result) => result.trim())
       .catch((error) => {
@@ -417,7 +415,7 @@ export class Project {
 
       repoUrl = repoUrl.replace("https://", "").replace("http://", "");
 
-      await git.clone(
+      await this.#git.clone(
         `https://x-access-token:${token}@${repoUrl}`,
         this.paths.projectDirectory,
         {
@@ -430,6 +428,8 @@ export class Project {
 
     if (error) spinner.stop(error?.toString(), 1);
     else spinner.stop(`Repository ${colors.dim(repoUrl)} cloned.`);
+
+    this.#git.cwd({ path: this.paths.projectDirectory });
   }
 
   private async _copyLocal({ sourcePath }: { sourcePath: string }) {
