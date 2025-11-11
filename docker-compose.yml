@@ -1,9 +1,15 @@
 services:
   api:
     container_name: app-preview-api
-    image: oven/bun
+    build:
+      dockerfile_inline: |
+        FROM oven/bun
+        RUN apt-get update && apt-get install -y git curl
+        RUN curl -fsSL https://get.docker.com/ | sh
     volumes:
       - "${PWD}:/app-preview:Z"
+      # docker socket
+      - "/var/run/docker.sock:/var/run/docker.sock:Z"
     working_dir: /app-preview
     command: >
       bun run ./src/api

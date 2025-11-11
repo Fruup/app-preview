@@ -14,12 +14,17 @@ export const webhooksRouter: FastifyPluginCallback = (fastify) => {
       return response.status(500).send("Middleware not configured");
     if (!request.rawBody) return response.status(400).send("No raw body found");
 
-    await webhooks.verifyAndReceive({
-      id: request.headers["x-github-hook-id"] as string,
-      name: request.headers["x-github-event"] as string,
-      signature: request.headers["x-hub-signature-256"] as string,
-      payload: request.rawBody.toString("utf-8"),
-    });
+    // See https://github.com/octokit/webhooks.js#webhooksverifyandreceive
+    await webhooks
+      .verifyAndReceive({
+        id: request.headers["x-github-delivery"] as string,
+        name: request.headers["x-github-event"] as string,
+        signature: request.headers["x-hub-signature-256"] as string,
+        payload: request.rawBody as string,
+      })
+      .catch((error) => {
+        console.error("Error processing webhook:", error);
+      });
   });
 };
 
