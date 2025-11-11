@@ -429,7 +429,8 @@ export class Project {
     if (error) spinner.stop(error?.toString(), 1);
     else spinner.stop(`Repository ${colors.dim(repoUrl)} cloned.`);
 
-    this.#git.cwd({ path: this.paths.projectDirectory });
+    // Set git working directory
+    this.#git.cwd({ path: this.paths.projectDirectory, root: true });
   }
 
   private async _copyLocal({ sourcePath }: { sourcePath: string }) {
