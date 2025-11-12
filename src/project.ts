@@ -5,7 +5,7 @@ import { exec } from "./lib";
 import { dockerComposeSchema } from "./schemas/compose";
 import path from "path";
 import type { EnvGenerator } from "../src/env";
-import { OnePasswordEnvGenerator } from "../src/env";
+import { EnvVars, OnePasswordEnvGenerator } from "../src/env";
 import type { ContainerStatus } from "./types";
 import {
   buildEnvString,
@@ -23,7 +23,7 @@ export interface ProjectConfig {
   /** Relative to the project's directory */
   root?: string;
   dockerComposePath?: string;
-  envGenerator?: EnvGenerator;
+  envGenerator?: EnvGenerator | EnvGenerator[];
   expose?: {
     /** Maps a service (same as in the compose file) to its domain */
     [serviceKey: string]: {
@@ -336,14 +336,24 @@ export class Project {
     );
 
     // Process .env
-    let existingEnvContent = "";
+    let existingEnvs = new EnvVars({});
+
     if (this.options.envGenerator) {
-      existingEnvContent = await this.options.envGenerator.generate();
+      if (Array.isArray(this.options.envGenerator)) {
+        existingEnvs = await Promise.all(
+          this.options.envGenerator.map((gen) => gen.generate())
+        ).then((results) =>
+          results.reduce((acc, env) => acc.merge(env), new EnvVars({}))
+        );
+      } else {
+        existingEnvs = await this.options.envGenerator.generate();
+      }
     } else {
       const envFilePath = path.join(this.paths.root, ".env");
       const envFile = Bun.file(envFilePath);
 
-      if (await envFile.exists()) existingEnvContent = await envFile.text();
+      if (await envFile.exists())
+        existingEnvs = EnvVars.parse(await envFile.text());
       else console.warn(`No .env file found at ${envFilePath}`);
     }
 
@@ -355,17 +365,18 @@ export class Project {
         return null;
       });
 
+    const addedEnvs = new EnvVars({
+      APP_NAME: this.options.appName,
+      APP_NAME_DOMAIN_INFIX: toDomainNamePart(this.options.appName),
+      COMMIT_SHA: commitSha,
+    });
+
     const envContent =
       `# ---------- ADDED ----------\n\n` +
-      buildEnvString({
-        APP_NAME: this.options.appName,
-        APP_NAME_DOMAIN_INFIX: toDomainNamePart(this.options.appName),
-        COMMIT_SHA: commitSha,
-        // PR_NUMBER
-      }) +
+      addedEnvs.stringify() +
       "\n\n" +
       `# ---------- ORIGINAL ----------\n\n` +
-      existingEnvContent;
+      existingEnvs.stringify();
 
     await Bun.write(envFilePath, envContent);
 

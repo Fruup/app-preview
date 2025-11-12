@@ -1,9 +1,10 @@
-import { createClient } from "@1password/sdk";
+import { createClient, type Client } from "@1password/sdk";
 import pkg from "../package.json";
 import { loadConfig } from "./config";
+import { buildEnvString } from "./utils";
 
 export abstract class EnvGenerator {
-  abstract generate(): Promise<string>;
+  abstract generate(): Promise<EnvVars>;
 }
 
 export class OnePasswordEnvGenerator extends EnvGenerator {
@@ -16,36 +17,104 @@ export class OnePasswordEnvGenerator extends EnvGenerator {
       );
     }
 
-    return new OnePasswordEnvGenerator({
-      itemUri,
-      token: config.onePassword.serviceToken,
+    const token = config.onePassword.serviceToken;
+
+    const client = await createClient({
+      auth: token,
+      integrationName: pkg.name,
+      integrationVersion: pkg.version,
     });
+
+    return new OnePasswordEnvGenerator(itemUri, client);
   }
 
   private constructor(
-    private readonly options: {
-      itemUri: string;
-      token: string;
-    }
+    private readonly itemUri: string,
+    private readonly client: Client
   ) {
     super();
   }
 
   async generate() {
-    const client = await createClient({
-      auth: this.options.token,
-      integrationName: pkg.name,
-      integrationVersion: pkg.version,
-    });
+    const envString = await this.client.secrets.resolve(this.itemUri);
+    return EnvVars.parse(envString);
+  }
+}
 
-    let env = await client.secrets.resolve(this.options.itemUri);
+export class EnvVars {
+  readonly envVars: Record<string, string>;
 
-    // Perform filtering to ensure a (more or less) valid ENV file
-    env = env
-      .split("\n")
-      .filter((line) => !line || /^[A-Z#\s]/.test(line))
-      .join("\n");
+  constructor(_envVars: Record<string, string | null | undefined>) {
+    this.envVars = Object.fromEntries(
+      Object.entries(_envVars).flatMap<[string, string]>(([key, value]) =>
+        typeof value === "string" ? [[key, value]] : []
+      )
+    );
+  }
 
-    return env;
+  stringify(): string {
+    return buildEnvString(this.envVars);
+  }
+
+  merge(
+    other: EnvVars,
+    options: {
+      /** @default "other" */
+      prefer?: "self" | "other";
+      /** @default false */
+      overrideWithEmpty?: boolean;
+    } = {}
+  ): EnvVars {
+    const { prefer = "other", overrideWithEmpty = false } = options;
+
+    let first = prefer === "self" ? this : other;
+    let second = prefer === "self" ? other : this;
+
+    if (!overrideWithEmpty) {
+      return new EnvVars({ ...first.envVars, ...second.envVars });
+    }
+
+    const keys = new Set<string>([
+      ...Object.keys(first.envVars),
+      ...Object.keys(second.envVars),
+    ]);
+
+    const result: Record<string, string> = {};
+
+    for (const key of keys) {
+      const firstValue = first.envVars[key];
+      const secondValue = second.envVars[key];
+
+      if (firstValue !== "" && firstValue !== undefined) {
+        result[key] = firstValue;
+      } else if (secondValue !== undefined) {
+        result[key] = secondValue;
+      }
+    }
+
+    return new EnvVars(result);
+  }
+
+  static parse(envString: string): EnvVars {
+    const regex = /^([\w.-]+)=(.*)$/;
+
+    return new EnvVars(
+      Object.fromEntries(
+        envString.split("\n").flatMap<[string, string]>((line) => {
+          const match = line.match(regex);
+
+          const key = match?.[1];
+          let value = match?.[2];
+
+          if (value?.startsWith('"') && value.endsWith('"')) {
+            value = JSON.parse(value);
+          } else if (value?.startsWith("'") && value.endsWith("'")) {
+            value = value.slice(1, -1);
+          }
+
+          return key ? [[key, value ?? ""]] : [];
+        })
+      )
+    );
   }
 }
