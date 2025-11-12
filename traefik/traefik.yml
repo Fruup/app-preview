@@ -5,7 +5,7 @@ global:
 
 api:
   dashboard: true
-  # insecure: true
+  insecure: true
 
 entryPoints:
   web:
@@ -15,10 +15,10 @@ entryPoints:
     http:
       tls:
         certResolver: letsencrypt
-        domains:
-          - main: "*.traefik.me"
-            # sans:
-            #   - "traefik.me"
+        # domains:
+        #   - main: "*.traefik.me"
+        # sans:
+        #   - "traefik.me"
 
 providers:
   docker:
