@@ -103,10 +103,10 @@ export async function configureGithubIntegration() {
 
   await Bun.sleep(2000);
 
-  try {
-    const { default: open } = await import("open");
-    await open(url);
-  } catch {}
+  // try {
+  //   const { default: open } = await import("open");
+  //   await open(url);
+  // } catch {}
 
   const answer = await prompts.confirm({
     message: "Have you set up the GitHub App and completed the setup process?",
