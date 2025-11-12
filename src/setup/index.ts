@@ -11,11 +11,13 @@ export async function setup() {
   const config = await loadConfig();
 
   {
-    const answer = await prompts.text({
+    let answer = await prompts.text({
       message: "Public URL for your app (leave empty to use public IP):",
       initialValue: config.publicUrl || "",
       validate(value) {
-        value ??= "";
+        value = value?.trim();
+
+        if (!value) return;
 
         if (!URL.parse(value)) {
           return "Please enter a valid URL";
@@ -24,6 +26,8 @@ export async function setup() {
     });
 
     if (prompts.isCancel(answer)) process.exit(1);
+
+    answer = answer.trim();
     if (answer) {
       config.publicUrl = answer;
       await storeConfig(config);

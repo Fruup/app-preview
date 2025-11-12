@@ -1,8 +1,10 @@
-# App Preview
-
 Kind of like Coolify & Dokploy.
 
-## TODO
+# Installation
+
+`sudo curl https://raw.githubusercontent.com/Fruup/app-preview/refs/heads/main/install.sh | bash`
+
+# TODO
 
 - [ ] Quickly spin up/down projects from git repos
 - [x] GitHub integration
