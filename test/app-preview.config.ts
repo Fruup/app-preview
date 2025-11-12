@@ -8,7 +8,7 @@ export default defineConfig(
     expose: {
       test: {
         // domain: `${appNameDomainInfix}.app-preview.traefik.me`,
-        domain: `https://${appNameDomainInfix}.88.99.35.245.nip.io`,
+        domain: `app-preview-pr-11-test.88.99.35.245.nip.io`,
       },
     },
   })
