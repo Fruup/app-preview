@@ -13,3 +13,5 @@ Kind of like Coolify & Dokploy.
 - [x] 1Password integration
 
 - Check if infra config has changed. If not, we can just pull and recreate containers.
+
+.
