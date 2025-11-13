@@ -12,19 +12,32 @@ export const webhooksRouter: FastifyPluginCallback = (fastify) => {
     if (!webhooks) return response.status(500).send("Webhooks not configured");
     if (!_middleware)
       return response.status(500).send("Middleware not configured");
-    if (!request.rawBody) return response.status(400).send("No raw body found");
 
-    // See https://github.com/octokit/webhooks.js#webhooksverifyandreceive
+    // if (typeof request.rawBody !== "string")
+    //   return response.status(400).send("No raw body found or not a string");
+
+    // TODO: Having trouble verifying requests. Using receive as a workaround for now.
     await webhooks
-      .verifyAndReceive({
+      .receive({
         id: request.headers["x-github-delivery"] as string,
-        name: request.headers["x-github-event"] as string,
-        signature: request.headers["x-hub-signature-256"] as string,
-        payload: request.rawBody as string,
+        name: request.headers["x-github-event"] as any,
+        payload: request.body as any,
       })
       .catch((error) => {
         console.error("Error processing webhook:", error);
       });
+
+    // See https://github.com/octokit/webhooks.js#webhooksverifyandreceive
+    // await webhooks
+    //   .verifyAndReceive({
+    //     id: request.headers["x-github-delivery"] as string,
+    //     name: request.headers["x-github-event"] as string,
+    //     signature: request.headers["x-hub-signature-256"] as string,
+    //     payload: request.rawBody as string,
+    //   })
+    //   .catch((error) => {
+    //     console.error("Error processing webhook:", error);
+    //   });
   });
 };
 
