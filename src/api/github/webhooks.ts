@@ -74,8 +74,18 @@ async function getWebhooks() {
     const config = await loadConfig();
     const repoConfig = config.repositories[repository.full_name];
 
-    if (!repoConfig?.enablePreview) return;
-    if (pull_request.base.ref !== repoConfig.targetBranch) return;
+    if (!repoConfig?.enablePreview) {
+      console.warn(
+        `Preview environments not enabled for repository ${repository.full_name}`
+      );
+      return;
+    }
+    if (pull_request.base.ref !== repoConfig.targetBranch) {
+      console.warn(
+        `Pull request base branch ${pull_request.base.ref} does not match target branch ${repoConfig.targetBranch}`
+      );
+      return;
+    }
 
     const appName = `${toDomainNamePart(repository.name)}-pr-${number}`;
 
