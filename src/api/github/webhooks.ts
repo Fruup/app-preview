@@ -16,6 +16,14 @@ export const webhooksRouter: FastifyPluginCallback = (fastify) => {
     // if (typeof request.rawBody !== "string")
     //   return response.status(400).send("No raw body found or not a string");
 
+    const event = {
+      id: request.headers["x-github-delivery"] as string,
+      name: request.headers["x-github-event"] as any,
+      payload: request.body as any,
+    };
+
+    console.debug("[DEBUG]", "event =", event);
+
     // TODO: Having trouble verifying requests. Using receive as a workaround for now.
     await webhooks
       .receive({
