@@ -109,6 +109,8 @@ export class Project {
       throw new Error("Failed to load project config");
     }
 
+    this.#isInitialized = true;
+
     return this;
   }
 
