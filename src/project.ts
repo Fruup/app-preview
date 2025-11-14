@@ -7,12 +7,7 @@ import path from "path";
 import type { EnvGenerator } from "../src/env";
 import { EnvVars, OnePasswordEnvGenerator } from "../src/env";
 import type { ContainerStatus } from "./types";
-import {
-  buildEnvString,
-  getGithubToken,
-  toDomainNamePart,
-  tryCatch,
-} from "./utils";
+import { getGithubToken, toDomainNamePart, tryCatch } from "./utils";
 
 export interface ProjectOptions {
   appName: string;
@@ -107,6 +102,8 @@ export class Project {
         ...this.#options,
         ...config,
       };
+
+      console.debug("LOADED CONFIG:", this.#options);
     } catch (e) {
       console.error("Error loading config file:", e);
       throw new Error("Failed to load project config");
@@ -208,7 +205,11 @@ export class Project {
   }
 
   async up() {
-    await this.initialize();
+    if (!this.#isInitialized) {
+      throw new Error(
+        "Project not initialized. Please call initialize() first."
+      );
+    }
 
     const envFilePath = path.join(this.paths.temp, ".env");
 

@@ -1,5 +1,4 @@
-import type { App } from "@octokit/app";
-import { loadConfig, storeConfig, updateConfig } from "../config";
+import { loadConfig, storeConfig } from "../config";
 import { createAppAuth } from "@octokit/auth-app";
 
 export const getPublicIp = async (): Promise<string | null> => {
