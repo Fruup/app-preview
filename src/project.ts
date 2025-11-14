@@ -102,8 +102,6 @@ export class Project {
         ...this.#options,
         ...config,
       };
-
-      console.debug("LOADED CONFIG:", this.#options);
     } catch (e) {
       console.error("Error loading config file:", e);
       throw new Error("Failed to load project config");
