@@ -3,6 +3,8 @@ import { Project } from "../project";
 import * as prompts from "@clack/prompts";
 import * as colors from "nanocolors";
 import { configureGithubIntegration, setup } from "../setup";
+import { getGitHubApp } from "../api/github/app";
+import { loadConfig, updateConfig } from "../config";
 
 const program = new Command();
 
@@ -36,6 +38,109 @@ configCommand
     );
 
     Bun.openInEditor("./app-preview.config.json");
+  });
+
+program
+  .command("add")
+  .description("Enable app preview for a repository")
+  .argument(
+    "[repository]",
+    `GitHub repository in the format ${colors.dim("owner/repo")}`
+  )
+  .action(async (initialRepository) => {
+    const loader = prompts.spinner();
+    loader.start("Loading repos...");
+
+    const app = await getGitHubApp();
+    if (!app) {
+      loader.stop("No GitHub App configured", 1);
+      process.exit(1);
+    }
+
+    const config = await loadConfig();
+    const installationId = config.githubApp?.installationId;
+    if (!installationId) {
+      loader.stop(
+        "GitHub App installation ID not found in config. Is the GitHub integration set up?",
+        1
+      );
+      process.exit(1);
+    }
+
+    const octokit = await app.getInstallationOctokit(installationId);
+    const repos = await octokit
+      .request("GET /installation/repositories")
+      .then(async ({ data: { repositories: repos } }) =>
+        Promise.all(
+          repos.map(async ({ full_name, default_branch, owner, name }) => {
+            const branches = await octokit
+              .request("GET /repos/{owner}/{repo}/branches", {
+                owner: owner.login,
+                repo: name,
+              })
+              .then(({ data }) => data.map((branch) => branch.name));
+
+            return {
+              fullName: full_name,
+              branches,
+              defaultBranch: default_branch,
+            };
+          })
+        )
+      )
+      .catch((e) => {
+        loader.stop("Error fetching repositories:", 1);
+        console.error(e);
+
+        process.exit(1);
+      });
+
+    loader.stop();
+
+    const repoAnswer = await prompts.autocomplete({
+      message: "Select a repository:",
+      options: repos.map((repo) => ({
+        label: repo.fullName,
+        value: repo.fullName,
+      })),
+      initialUserInput: initialRepository || "",
+    });
+
+    if (prompts.isCancel(repoAnswer)) return;
+
+    const targetBranchAnswer = await prompts.select({
+      message: "Select the target branch for previews:",
+      options: repos
+        .find((repo) => repo.fullName === repoAnswer)!
+        .branches.map((branch) => ({
+          label:
+            branch +
+            (branch ===
+            repos.find((repo) => repo.fullName === repoAnswer)?.defaultBranch
+              ? colors.green(" (default)")
+              : ""),
+          value: branch,
+        })),
+      initialValue: repos.find((repo) => repo.fullName === repoAnswer)
+        ?.defaultBranch,
+    });
+
+    if (prompts.isCancel(targetBranchAnswer)) return;
+
+    await updateConfig((config) => ({
+      ...config,
+      repositories: {
+        ...config.repositories,
+        [repoAnswer]: {
+          enablePreview: true,
+          targetBranch: targetBranchAnswer,
+        },
+      },
+    }));
+
+    prompts.log.success(
+      `Enabled app preview for ${colors.bold(repoAnswer)} on branch ${colors.bold(targetBranchAnswer)}`
+    );
   });
 
 program
@@ -92,6 +197,7 @@ program
     });
 
     await project.initialize();
+    await project.up();
   });
 
 program.parse(Bun.argv);
