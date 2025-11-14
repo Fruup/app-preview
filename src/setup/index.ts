@@ -8,6 +8,32 @@ import { exec } from "../lib";
 export async function setup() {
   prompts.intro("Setting up App Preview");
 
+  // Start proxy
+  {
+    const taskLog = prompts.taskLog({
+      title: "Starting proxy...",
+    });
+
+    try {
+      await exec([
+        "docker",
+        "compose",
+        "--project-directory",
+        "traefik",
+        "up",
+        "-d",
+        "--force-recreate",
+        "--wait",
+      ]);
+
+      taskLog.success("Proxy started");
+    } catch (e) {
+      console.error(e);
+
+      taskLog.error("Failed to start proxy");
+    }
+  }
+
   const config = await loadConfig();
 
   {
