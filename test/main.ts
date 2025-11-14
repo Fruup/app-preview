@@ -5,9 +5,11 @@ console.log(Bun.env);
 const server = Bun.serve({
   port: Bun.env.PORT,
   hostname: "0.0.0.0",
-  fetch(req, server) {
+  fetch() {
     return new Response(
-      `Hello from App Preview! 🦆 (sha=${Bun.env.COMMIT_SHA})`
+      `Hello from App Preview! 🦆 (sha=${Bun.env.COMMIT_SHA})\n` +
+        "The current time is: " +
+        new Date().toISOString()
     );
   },
 });
